@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 #-----------------------
 # --- 1. SETUP AND DATA LOADING ---
 #-----------------------
-PROJECT_ROOT = Path.cwd().parent
+PROJECT_ROOT = Path.cwd()
 DATA_PATH = PROJECT_ROOT / "Data" / "train-00000-of-00001.parquet"
 target_col = 'target'
 lags = [1, 4, 96, 672] # 15min, 1hr, 1 day, 1 week
