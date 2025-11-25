@@ -38,3 +38,20 @@ eval:
 # format: For code quality (requires 'black' in requirements.txt)
 format:
 	black .
+
+
+# --- New Target for CI/CD Commit ---
+# This explicitly stages the generated Model and Results files before committing.
+update-branch:
+	# Configure Git with secrets
+	git config --global user.name $(USER_NAME)
+	git config --global user.email $(USER_EMAIL)
+
+	# CRITICAL FIX: Explicitly stage all generated files, including new folders
+	git add Model Results 
+
+	# Commit the changes (using --allow-empty to avoid failure if only report.md was changed)
+	git commit -m "Update with new results from $(GITHUB_SHA)" --allow-empty
+
+	# Push the committed changes to the 'update' branch
+	git push --force origin HEAD:update
