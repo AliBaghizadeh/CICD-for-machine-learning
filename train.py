@@ -20,35 +20,29 @@ DATA_PATH = PROJECT_ROOT / "Data" / "train-00000-of-00001.parquet"
 target_col = 'target'
 lags = [1, 4, 96, 672] # 15min, 1hr, 1 day, 1 week
 
-
 def load_and_preprocess_data(path):
     """Loads the Parquet file, explodes list-columns, and preprocesses data."""
     try:
         df = pd.read_parquet(path)
         
-        # Columns that contain lists/arrays and need to be exploded
-        all_data_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
-                         'target', 'temperature', 'radiation_direct_horizontal', 
-                         'radiation_diffuse_horizontal']
+        all_cols_to_explode = ['timestamp', 'id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
+                               'target', 'temperature', 'radiation_direct_horizontal', 
+                               'radiation_diffuse_horizontal']
         
-        # 1. Robust Flattening and Conversion
-        for col in all_data_cols:
+        # 1. Force List Conversion and Flattening (Required for CI success)
+        for col in all_cols_to_explode:
             if col in df.columns:
-                # Force column to object dtype to allow complex nested types
-                df[col] = df[col].astype(object) 
-                
-                # CRITICAL FIX: Use np.ravel to flatten any nested arrays/lists 
-                # then convert to a standard Python list. This resolves the unhashable type error.
+                # Use np.ravel to flatten and ensure it's a simple list
                 df[col] = df[col].apply(lambda x: list(np.ravel(x)) if isinstance(x, (np.ndarray, list)) else x)
-        
-        # Handle timestamp similarly, as it is part of the explode operation index
-        df['timestamp'] = df['timestamp'].apply(lambda x: list(np.ravel(x)) if isinstance(x, (np.ndarray, list)) else x)
 
-        # 2. Explode Operation (The locally working code)
-        # This relies on pandas correctly aligning the newly flattened lists.
-        df_exploded = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
+        # 2. Explode and Reconstruct (The definitive fix)
+        # Explode all columns simultaneously, keeping the original DataFrame index (row number)
+        df_exploded = df.explode(column=all_cols_to_explode, ignore_index=True)
 
         # 3. Convert Types and Set Final Index
+        # Note: 'timestamp' is now a column and its elements are single datetime objects/strings
+        df_exploded['timestamp'] = pd.to_datetime(df_exploded['timestamp'])
+        
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
                     'temperature', 'radiation_direct_horizontal', 'radiation_diffuse_horizontal']:
             df_exploded[col] = pd.to_numeric(df_exploded[col], errors='coerce')
@@ -68,7 +62,6 @@ def load_and_preprocess_data(path):
         # Crucial for debugging: log the actual error
         print(f"Error loading or preprocessing data: {e}")
         return None
-
 
 #--------------------------------
 # --- 2. FEATURE ENGINEERING ---
