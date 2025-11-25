@@ -5,3 +5,4 @@ xgboost==3.0.5
 matplotlib==3.10.7
 skops==0.13.0
 dvc== 3.64.0
+black
