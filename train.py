@@ -20,9 +20,6 @@ DATA_PATH = PROJECT_ROOT / "Data" / "train-00000-of-00001.parquet"
 target_col = 'target'
 lags = [1, 4, 96, 672] # 15min, 1hr, 1 day, 1 week
 
-# train.py (Updated load_and_preprocess_data function)
-
-# train.py (Updated load_and_preprocess_data function)
 
 def load_and_preprocess_data(path):
     """Loads the Parquet file, explodes list-columns, and preprocesses data."""
@@ -33,19 +30,21 @@ def load_and_preprocess_data(path):
                      'target', 'temperature', 'radiation_direct_horizontal', 
                      'radiation_diffuse_horizontal']
         
-        # 1. Force Complex Columns to List Type
+        # 1. Force List Conversion and Explode
         for col in list_cols:
             if col in df.columns:
-                # Step 1: Force column to object dtype to allow mixed/complex types
-                df[col] = df[col].astype(object) 
-                
-                # Step 2: Convert nested NumPy arrays to Python lists using .tolist()
-                # This explicitly handles the 'unhashable type' error.
+                # Convert NumPy arrays to Python lists using .tolist() for explicit compatibility
                 df[col] = df[col].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
 
-        # 2. Explode Operation
-        # Set 'timestamp' as the index first, then explode all columns simultaneously
-        df_exploded = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
+        # 2. Explode Columns (This is the critical change)
+        # We use the official df.explode() method on the list of columns.
+        # This avoids the set_index().apply(explode) operation that was causing the hash error.
+        df_exploded = df.explode(column=list_cols, ignore_index=True)
+        
+        # The 'timestamp' column still contains the original array of timestamps. 
+        # Since all other columns were exploded, we must now explode the timestamp.
+        df_exploded['timestamp'] = df_exploded['timestamp'].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
+        df_exploded = df_exploded.explode('timestamp', ignore_index=True)
 
         # 3. Convert Types and Set Final Index
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
