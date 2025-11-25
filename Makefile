@@ -47,10 +47,13 @@ update-branch:
 	git config --global user.name $(USER_NAME)
 	git config --global user.email $(USER_EMAIL)
 
-	# CRITICAL FIX: Explicitly stage all generated files, including new folders
+	# FIX: Ensure Model and Results directories exist before running git add
+	mkdir -p Model Results
+
+	# CRITICAL FIX: Explicitly stage all generated files
 	git add Model Results 
 
-	# Commit the changes (using --allow-empty to avoid failure if only report.md was changed)
+	# Commit the changes (using --allow-empty to avoid failure)
 	git commit -m "Update with new results from $(GITHUB_SHA)" --allow-empty
 
 	# Push the committed changes to the 'update' branch
