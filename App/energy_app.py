@@ -1,0 +1,87 @@
+import gradio as gr
+import skops.io as sio
+import numpy as np
+import pandas as pd
+
+# Define the model path relative to the root of the application (Hugging Face space)
+MODEL_PATH = "./Model/energy_forecast_pipeline.skops"
+
+# Define the trusted types for skops v0.10+ security update (includes final fixes)
+TRUSTED_TYPES = [
+    'numpy.ndarray', 
+    'sklearn.preprocessing._data.StandardScaler', 
+    'sklearn.pipeline.Pipeline', 
+    'xgboost.sklearn.XGBRegressor',
+    'xgboost.core.Booster', # CRITICAL FIX
+    'pandas._libs.tslibs.timestamps.Timestamp', 
+    'sklearn.impute._base.SimpleImputer' 
+]
+
+# --- 1. Load the Model Pipeline ---
+try:
+    # Use the explicit list of trusted types
+    pipeline = sio.load(MODEL_PATH, trusted=TRUSTED_TYPES) 
+    FEATURE_COUNT = pipeline['model'].n_features_in_
+except Exception as e:
+    print(f"Error loading model: {e}")
+    print("NOTE: Model file missing locally. Proceeding with default settings.")
+    pipeline = None
+    FEATURE_COUNT = 45 # Default count based on standard feature engineering
+
+# --- 2. Prediction Function (Simplified for Demo) ---
+def predict_load_simplified(last_load: float, current_temp: float, country_id: str):
+    """
+    Predicts energy load based on a simplified set of dynamic features.
+    """
+    if pipeline is None:
+        return "ERROR: Model Pipeline failed to load. Please ensure the model file exists."
+
+    # Encode Country ID (must match the encoding used in train.py)
+    id_map = {"AT": 0, "DE": 1, "FR": 2, "IT": 3, "BE": 4, "CH": 5, "NL": 6, "PL": 7, "CZ": 8, "ES": 9}
+    id_encoded = id_map.get(country_id, 0)
+    
+    # Create the feature array with the expected number of features (e.g., 45)
+    input_features = np.zeros((1, FEATURE_COUNT))
+    
+    # Place the user inputs into the array at arbitrary (but consistent) locations
+    input_features[0, 0] = last_load     
+    input_features[0, 1] = current_temp 
+    input_features[0, 2] = id_encoded    
+
+    try:
+        predicted_load = pipeline.predict(input_features)[0]
+    except Exception as e:
+        return f"Prediction Error: {e}. Check feature count ({FEATURE_COUNT})"
+
+    label = f"Predicted Energy Load: {predicted_load:,.2f} MW"
+    return label
+
+# --- 3. Gradio Interface Setup ---
+inputs = [
+    gr.Slider(0, 10000, step=1, label="Last Known Load (MW)", value=5000),
+    gr.Slider(-20, 40, step=0.1, label="Current Temperature (°C)", value=15.0),
+    gr.Radio(["AT", "DE", "FR", "IT", "BE", "CH", "NL", "PL", "CZ", "ES"], label="Country ID", value="DE"),
+]
+
+outputs = [gr.Label(label="Energy Load Forecast")]
+
+examples = [
+    [5000, 15.0, "DE"],
+    [3000, 5.5, "FR"],
+    [7000, 30.0, "AT"],
+]
+
+title = "⚡ Energy Load Forecast Model"
+description = "Forecasts short-term energy load (MW) based on recent load, temperature, and country."
+article = "This app is deployed automatically using GitHub Actions and Hugging Face Spaces."
+
+gr.Interface(
+    fn=predict_load_simplified,
+    inputs=inputs,
+    outputs=outputs,
+    examples=examples,
+    title=title,
+    description=description,
+    article=article,
+    theme=gr.themes.Soft(),
+).launch(server_name="0.0.0.0", server_port=7860)
