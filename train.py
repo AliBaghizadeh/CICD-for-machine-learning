@@ -26,21 +26,26 @@ def load_and_preprocess_data(path):
     try:
         df = pd.read_parquet(path)
         
+        # Columns that contain lists/arrays and need to be exploded
         all_data_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
                          'target', 'temperature', 'radiation_direct_horizontal', 
                          'radiation_diffuse_horizontal']
         
-        # 1. Force explicit conversion of NumPy arrays to Python lists
-        # This is CRITICAL to resolve the "unhashable type" error that was masking this alignment error.
+        # 1. Robust Flattening and Conversion
         for col in all_data_cols:
             if col in df.columns:
-                df[col] = df[col].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
+                # Force column to object dtype to allow complex nested types
+                df[col] = df[col].astype(object) 
+                
+                # CRITICAL FIX: Use np.ravel to flatten any nested arrays/lists 
+                # then convert to a standard Python list. This resolves the unhashable type error.
+                df[col] = df[col].apply(lambda x: list(np.ravel(x)) if isinstance(x, (np.ndarray, list)) else x)
         
-        # Also ensure the timestamp column is a list/array for the explode operation
-        df['timestamp'] = df['timestamp'].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
+        # Handle timestamp similarly, as it is part of the explode operation index
+        df['timestamp'] = df['timestamp'].apply(lambda x: list(np.ravel(x)) if isinstance(x, (np.ndarray, list)) else x)
 
-        # 2. Explode Operation (Using the simplest, original form that works in the notebook)
-        # This relies on pandas correctly aligning the lists across all columns and the index.
+        # 2. Explode Operation (The locally working code)
+        # This relies on pandas correctly aligning the newly flattened lists.
         df_exploded = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
 
         # 3. Convert Types and Set Final Index
@@ -63,7 +68,6 @@ def load_and_preprocess_data(path):
         # Crucial for debugging: log the actual error
         print(f"Error loading or preprocessing data: {e}")
         return None
-
 
 
 #--------------------------------
