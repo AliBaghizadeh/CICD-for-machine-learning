@@ -29,15 +29,18 @@ def load_and_preprocess_data(path):
     try:
         df = pd.read_parquet(path)
         
-        # 1. Identify and Convert Array Columns to Lists
         list_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
                      'target', 'temperature', 'radiation_direct_horizontal', 
                      'radiation_diffuse_horizontal']
         
-        # Explicitly convert NumPy arrays inside the cells to Python lists using .tolist()
+        # 1. Force Complex Columns to List Type
         for col in list_cols:
             if col in df.columns:
-                # Apply .tolist() if the element is an array; otherwise, return the element
+                # Step 1: Force column to object dtype to allow mixed/complex types
+                df[col] = df[col].astype(object) 
+                
+                # Step 2: Convert nested NumPy arrays to Python lists using .tolist()
+                # This explicitly handles the 'unhashable type' error.
                 df[col] = df[col].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
 
         # 2. Explode Operation
@@ -47,7 +50,6 @@ def load_and_preprocess_data(path):
         # 3. Convert Types and Set Final Index
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
                     'temperature', 'radiation_direct_horizontal', 'radiation_diffuse_horizontal']:
-            # Convert to numeric
             df_exploded[col] = pd.to_numeric(df_exploded[col], errors='coerce')
 
         # Set the final DatetimeIndex and sort
@@ -57,13 +59,14 @@ def load_and_preprocess_data(path):
         df_with_id_index = df_final.set_index('id', append=True) 
         df_imputed = df_with_id_index.groupby(level='id').ffill()
         df_imputed = df_imputed.reset_index(level='id') 
-        df_imputed = df_imputed.fillna(0) # Final fill for series start NaNs
+        df_imputed = df_imputed.fillna(0)
 
         return df_imputed
     
     except Exception as e:
         print(f"Error loading or preprocessing data: {e}")
         return None
+
 
 
 #--------------------------------
