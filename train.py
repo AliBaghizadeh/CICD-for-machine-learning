@@ -26,25 +26,22 @@ def load_and_preprocess_data(path):
     try:
         df = pd.read_parquet(path)
         
-        list_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
-                     'target', 'temperature', 'radiation_direct_horizontal', 
-                     'radiation_diffuse_horizontal']
+        all_data_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
+                         'target', 'temperature', 'radiation_direct_horizontal', 
+                         'radiation_diffuse_horizontal']
         
-        # 1. Force List Conversion and Explode
-        for col in list_cols:
+        # 1. Force explicit conversion of NumPy arrays to Python lists
+        # This is CRITICAL to resolve the "unhashable type" error that was masking this alignment error.
+        for col in all_data_cols:
             if col in df.columns:
-                # Convert NumPy arrays to Python lists using .tolist() for explicit compatibility
-                df[col] = df[col].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
-
-        # 2. Explode Columns (This is the critical change)
-        # We use the official df.explode() method on the list of columns.
-        # This avoids the set_index().apply(explode) operation that was causing the hash error.
-        df_exploded = df.explode(column=list_cols, ignore_index=True)
+                df[col] = df[col].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
         
-        # The 'timestamp' column still contains the original array of timestamps. 
-        # Since all other columns were exploded, we must now explode the timestamp.
-        df_exploded['timestamp'] = df_exploded['timestamp'].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
-        df_exploded = df_exploded.explode('timestamp', ignore_index=True)
+        # Also ensure the timestamp column is a list/array for the explode operation
+        df['timestamp'] = df['timestamp'].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
+
+        # 2. Explode Operation (Using the simplest, original form that works in the notebook)
+        # This relies on pandas correctly aligning the lists across all columns and the index.
+        df_exploded = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
 
         # 3. Convert Types and Set Final Index
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
@@ -63,6 +60,7 @@ def load_and_preprocess_data(path):
         return df_imputed
     
     except Exception as e:
+        # Crucial for debugging: log the actual error
         print(f"Error loading or preprocessing data: {e}")
         return None
 
