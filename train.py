@@ -25,22 +25,26 @@ def load_and_preprocess_data(path):
     try:
         df = pd.read_parquet(path)
         
-        all_cols_to_explode = ['timestamp', 'id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
-                               'target', 'temperature', 'radiation_direct_horizontal', 
-                               'radiation_diffuse_horizontal']
+        # 1. Define columns to explode (Must correspond to the time series lists)
+        # CRITICAL FIX: Removed 'id' from this list because it is a static value, not a list.
+        time_series_cols = ['timestamp', 'solar_generation_actual', 'wind_onshore_generation_actual', 
+                            'target', 'temperature', 'radiation_direct_horizontal', 
+                            'radiation_diffuse_horizontal']
         
-        # 1. Force List Conversion and Flattening (Required for CI success)
-        for col in all_cols_to_explode:
+        # 2. Force List Conversion and Flattening
+        # We only apply this to the columns that are actually time series lists
+        for col in time_series_cols:
             if col in df.columns:
                 # Use np.ravel to flatten and ensure it's a simple list
                 df[col] = df[col].apply(lambda x: list(np.ravel(x)) if isinstance(x, (np.ndarray, list)) else x)
 
-        # 2. Explode and Reconstruct (The definitive fix)
-        # Explode all columns simultaneously, keeping the original DataFrame index (row number)
-        df_exploded = df.explode(column=all_cols_to_explode, ignore_index=True)
+        # 3. Explode Operation
+        # We only explode the time series columns. 
+        # Pandas will automatically repeat the static 'id' column for every row.
+        df_exploded = df.explode(column=time_series_cols, ignore_index=True)
 
-        # 3. Convert Types and Set Final Index
-        # Note: 'timestamp' is now a column and its elements are single datetime objects/strings
+        # 4. Convert Types and Set Final Index
+        # 'timestamp' is now a column of individual values
         df_exploded['timestamp'] = pd.to_datetime(df_exploded['timestamp'])
         
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
@@ -50,7 +54,7 @@ def load_and_preprocess_data(path):
         # Set the final DatetimeIndex and sort
         df_final = df_exploded.set_index('timestamp').sort_index()
         
-        # 4. Imputation
+        # 5. Imputation
         df_with_id_index = df_final.set_index('id', append=True) 
         df_imputed = df_with_id_index.groupby(level='id').ffill()
         df_imputed = df_imputed.reset_index(level='id') 
@@ -59,7 +63,6 @@ def load_and_preprocess_data(path):
         return df_imputed
     
     except Exception as e:
-        # Crucial for debugging: log the actual error
         print(f"Error loading or preprocessing data: {e}")
         return None
 
