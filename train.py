@@ -22,37 +22,39 @@ lags = [1, 4, 96, 672] # 15min, 1hr, 1 day, 1 week
 
 # train.py (Updated load_and_preprocess_data function)
 
+# train.py (Updated load_and_preprocess_data function)
+
 def load_and_preprocess_data(path):
-    """Loads the Parquet file, preprocesses, imputes, and engineers features."""
+    """Loads the Parquet file, explodes list-columns, and preprocesses data."""
     try:
         df = pd.read_parquet(path)
         
-        # Identify columns that are lists (or numpy arrays that need conversion)
+        # 1. Identify and Convert Array Columns to Lists
         list_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
                      'target', 'temperature', 'radiation_direct_horizontal', 
                      'radiation_diffuse_horizontal']
-                     
-        # CRITICAL FIX: Ensure all list-like columns are converted to standard Python lists
-        # before the explode operation to avoid the 'unhashable type: numpy.ndarray' error.
+        
+        # Explicitly convert NumPy arrays inside the cells to Python lists using .tolist()
         for col in list_cols:
             if col in df.columns:
-                df[col] = df[col].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
+                # Apply .tolist() if the element is an array; otherwise, return the element
+                df[col] = df[col].apply(lambda x: x.tolist() if isinstance(x, np.ndarray) else x)
 
-        # Explode the list-columns into long format
-        # IMPORTANT: When exploding the timestamp column (index), it becomes part of the columns
-        df = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
-        
-        # Convert the DataFrame back to the correct dtypes
-        # ... (rest of the dtypes conversion remains the same) ...
+        # 2. Explode Operation
+        # Set 'timestamp' as the index first, then explode all columns simultaneously
+        df_exploded = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
+
+        # 3. Convert Types and Set Final Index
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
                     'temperature', 'radiation_direct_horizontal', 'radiation_diffuse_horizontal']:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
+            # Convert to numeric
+            df_exploded[col] = pd.to_numeric(df_exploded[col], errors='coerce')
 
-        # Set MultiIndex for time series alignment
-        df = df.set_index('timestamp').sort_index()
+        # Set the final DatetimeIndex and sort
+        df_final = df_exploded.set_index('timestamp').sort_index()
         
-        # Imputation (ffill grouped by country ID)
-        df_with_id_index = df.set_index('id', append=True) 
+        # 4. Imputation
+        df_with_id_index = df_final.set_index('id', append=True) 
         df_imputed = df_with_id_index.groupby(level='id').ffill()
         df_imputed = df_imputed.reset_index(level='id') 
         df_imputed = df_imputed.fillna(0) # Final fill for series start NaNs
@@ -60,9 +62,8 @@ def load_and_preprocess_data(path):
         return df_imputed
     
     except Exception as e:
-        # Print the exact error that occurred during the loading process
         print(f"Error loading or preprocessing data: {e}")
-        return None # Returns None if an error occurs
+        return None
 
 
 #--------------------------------
