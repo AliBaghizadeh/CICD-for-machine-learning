@@ -1,0 +1,2 @@
+
+Mean Absolute Error = 92.33, R2 Score = 1.0.
