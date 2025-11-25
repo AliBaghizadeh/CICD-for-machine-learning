@@ -20,16 +20,30 @@ DATA_PATH = PROJECT_ROOT / "Data" / "train-00000-of-00001.parquet"
 target_col = 'target'
 lags = [1, 4, 96, 672] # 15min, 1hr, 1 day, 1 week
 
+# train.py (Updated load_and_preprocess_data function)
+
 def load_and_preprocess_data(path):
     """Loads the Parquet file, preprocesses, imputes, and engineers features."""
     try:
-        # Load and explode data (assuming this function is defined elsewhere/works)
         df = pd.read_parquet(path)
         
+        # Identify columns that are lists (or numpy arrays that need conversion)
+        list_cols = ['id', 'solar_generation_actual', 'wind_onshore_generation_actual', 
+                     'target', 'temperature', 'radiation_direct_horizontal', 
+                     'radiation_diffuse_horizontal']
+                     
+        # CRITICAL FIX: Ensure all list-like columns are converted to standard Python lists
+        # before the explode operation to avoid the 'unhashable type: numpy.ndarray' error.
+        for col in list_cols:
+            if col in df.columns:
+                df[col] = df[col].apply(lambda x: list(x) if isinstance(x, np.ndarray) else x)
+
         # Explode the list-columns into long format
+        # IMPORTANT: When exploding the timestamp column (index), it becomes part of the columns
         df = df.set_index('timestamp').apply(pd.Series.explode).reset_index()
         
         # Convert the DataFrame back to the correct dtypes
+        # ... (rest of the dtypes conversion remains the same) ...
         for col in ['solar_generation_actual', 'wind_onshore_generation_actual', 'target', 
                     'temperature', 'radiation_direct_horizontal', 'radiation_diffuse_horizontal']:
             df[col] = pd.to_numeric(df[col], errors='coerce')
@@ -46,8 +60,9 @@ def load_and_preprocess_data(path):
         return df_imputed
     
     except Exception as e:
+        # Print the exact error that occurred during the loading process
         print(f"Error loading or preprocessing data: {e}")
-        return None
+        return None # Returns None if an error occurs
 
 
 #--------------------------------
