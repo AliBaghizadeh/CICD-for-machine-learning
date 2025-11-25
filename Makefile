@@ -37,4 +37,4 @@ eval:
 
 # format: For code quality (requires 'black' in requirements.txt)
 format:
-	black *.py
+	black .
