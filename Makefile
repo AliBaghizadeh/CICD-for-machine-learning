@@ -64,6 +64,12 @@ update-branch:
 # hf-login: Installs Hugging Face CLI and logs in using the secret token.
 # Note: The 'git pull' and 'git switch' commands are from the course material 
 # push-hub: Uploads specific files/folders to the Space root, renaming the app file.
+hf-login:
+	git pull origin update
+	git checkout update
+	pip install -U "huggingface_hub[cli]"
+	huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
+	
 push-hub:
     # 1. Upload the application file (App/energy_app.py) and rename it to app.py in the Space root
 	huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
