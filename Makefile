@@ -66,5 +66,6 @@ deploy:
 	# 1. Install the Hugging Face library
 	pip install huggingface_hub
 	
-	# 2. Run the Python deployment script (Uses HF_TOKEN from environment)
-	python deploy.py
+	# CRITICAL FIX: Use the 'env' command to explicitly set the environment variable 
+    # for the python process, using the value passed as an argument to 'make'.
+	env HF_TOKEN=$(HF_TOKEN) python deploy.py
