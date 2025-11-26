@@ -2,6 +2,7 @@ import gradio as gr
 import skops.io as sio
 import numpy as np
 import pandas as pd
+from datetime import datetime, timedelta
 
 # Define the model path relative to the root of the application (Hugging Face space)
 MODEL_PATH = "./Model/energy_forecast_pipeline.skops"
@@ -16,6 +17,31 @@ TRUSTED_TYPES = [
     'pandas._libs.tslibs.timestamps.Timestamp', 
     'sklearn.impute._base.SimpleImputer' 
 ]
+
+# Function to engineer time features for a target time
+def engineer_time_features():
+    """Calculates time features for the next hour (t+1)."""
+    
+    # 1. Determine the target time (t + 1 hour)
+    target_time = datetime.now() + timedelta(hours=1)
+    
+    # 2. Extract standard time features (ensure these match your train.py logic!)
+    hour = target_time.hour
+    day_of_week = target_time.dayofweek  # Monday=0, Sunday=6
+    month = target_time.month
+    
+    # Example: If your model used an 'Is_Weekend' feature
+    is_weekend = 1 if day_of_week >= 5 else 0 
+    
+    # Return a list of all engineered time features
+    # NOTE: The order and number must match the sequence used in train.py!
+    return [
+        hour, 
+        day_of_week, 
+        month,
+        is_weekend,
+        # ... add all other time/calendar features here ...
+    ]
 
 # --- 1. Load the Model Pipeline ---
 try:
@@ -39,6 +65,10 @@ def predict_load_simplified(last_load: float, current_temp: float, country_id: s
     # Encode Country ID (must match the encoding used in train.py)
     id_map = {"AT": 0, "DE": 1, "FR": 2, "IT": 3, "BE": 4, "CH": 5, "NL": 6, "PL": 7, "CZ": 8, "ES": 9}
     id_encoded = id_map.get(country_id, 0)
+
+    # Calculate future time features
+    time_features = engineer_time_features()
+    num_time_features = len(time_features)
     
     # Create the feature array with the expected number of features (e.g., 45)
     input_features = np.zeros((1, FEATURE_COUNT))
@@ -47,6 +77,10 @@ def predict_load_simplified(last_load: float, current_temp: float, country_id: s
     input_features[0, 0] = last_load     
     input_features[0, 1] = current_temp 
     input_features[0, 2] = id_encoded    
+
+    # Inject the calculated time features into the array
+    # (Assuming they start at index 3)
+    input_features[0, 3:3 + num_time_features] = time_features
 
     try:
         predicted_load = pipeline.predict(input_features)[0]
