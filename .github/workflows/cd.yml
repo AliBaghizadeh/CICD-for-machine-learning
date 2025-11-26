@@ -30,7 +30,11 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Deployment To Hugging Face
+        # IMPORTANT: We define the environment variable HF_TOKEN for the shell 
+        # before running 'make deploy'.
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # Run the make target which executes python deploy.py
-        run: make deploy HF_TOKEN=$HF_TOKEN
+        # The 'make deploy' command runs the python script, and since HF_TOKEN 
+        # is set in the environment, the python script can now read it 
+        # via os.environ.get("HF_TOKEN").
+        run: make deploy
