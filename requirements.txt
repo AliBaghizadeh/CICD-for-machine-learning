@@ -7,3 +7,4 @@ skops==0.13.0
 dvc== 3.64.0
 black
 pyarrow
+gradio>=4.0.0

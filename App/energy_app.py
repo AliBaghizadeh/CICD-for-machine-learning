@@ -83,5 +83,4 @@ gr.Interface(
     title=title,
     description=description,
     article=article,
-    theme=gr.themes.Soft(),
 ).launch(server_name="0.0.0.0", server_port=7860)
