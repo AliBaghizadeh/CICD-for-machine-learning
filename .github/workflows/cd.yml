@@ -22,23 +22,22 @@ jobs:
       - name: Install and Deploy to Hugging Face (Final Fix) 🚀
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          # Determine the user's bin path and set it for this step's execution
-          PYTHON_BIN_PATH: ${{ env.HOME }}/.local/bin
         run: |
           # CRITICAL FIX: Explicitly add the local bin path to PATH
-          export PATH="$PYTHON_BIN_PATH:$PATH"
+          # $HOME is a standard shell variable, making this reliable.
+          export PATH="$HOME/.local/bin:$PATH"
           
           echo "Installing dependencies and CLI..."
-          pip install -r requirements.txt
-          pip install "huggingface_hub[cli]"
+          pip install -r requirements.txt --no-cache-dir
+          pip install "huggingface_hub[cli]" --no-cache-dir
           
           echo "Starting deployment via huggingface-cli..."
           
-          # 1. Login (Uses the token correctly set via the env block)
+          # 1. Login
           huggingface-cli login --token $HF_TOKEN --add-to-git-credential
           
-          # 2. Upload App (Corrected path)
-          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+          # 2. Upload App (UI text changes will now deploy)
+          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
           
           # 3. Upload Requirements
           huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
