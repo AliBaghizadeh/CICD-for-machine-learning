@@ -61,18 +61,10 @@ update-branch:
 
 # --- Continuous Deployment Targets ---
 
-# hf-login: Logs in using the token via the absolute path to the CLI.
-hf-login:
-	# CRITICAL FIX: Use the absolute path $HOME/.local/bin/ to find the executable
-	$(HOME)/.local/bin/huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
-
-# push-hub: Uploads specific files/folders to the Space root.
-push-hub:
-	# CRITICAL FIX: Use the absolute path for all upload commands
-	$(HOME)/.local/bin/huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
-	$(HOME)/.local/bin/huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
-	$(HOME)/.local/bin/huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
-	$(HOME)/.local/bin/huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
-
-# deploy: Runs the login followed by the push.
-deploy: hf-login push-hub
+# deploy: Installs the library and runs the python deployment script
+deploy:
+	# 1. Install the Hugging Face library
+	pip install huggingface_hub
+	
+	# 2. Run the Python deployment script (Uses HF_TOKEN from environment)
+	python deploy.py
