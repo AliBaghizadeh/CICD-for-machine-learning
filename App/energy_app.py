@@ -106,10 +106,11 @@ examples = [
 ]
 
 title = "⚡ Energy Load Forecast: Production Ready CI/CD Demo"
+
 description = (
     "This application forecasts short-term energy consumption (MW) for the **next hour (t+1)**. "
     "The forecast is based on: Last Known Load, Expected Temperature, and Country context."
-)
+    )
 article = (
     "### Model Details and Prediction Logic\n"
     "The core of this application is a **XGBoost Regressor** trained on historical time-series data.\n\n"
@@ -118,7 +119,7 @@ article = (
     "The user only provides the dynamic inputs (Load, Temp, Country); the rest is automated by the pipeline.\n\n"
     "**Deployment:** This entire application, including the XGBoost model and results, is deployed "
     "automatically via **GitHub Actions** and **Continuous Deployment (CD)** to Hugging Face Spaces."
-)
+    )
 
 gr.Interface(
     fn=predict_load_simplified,
