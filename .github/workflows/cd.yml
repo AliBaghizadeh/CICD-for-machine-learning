@@ -29,22 +29,24 @@ jobs:
 
       - name: Install and Deploy to Hugging Face
         env:
-          HF_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use GITHUB_TOKEN here, but HF_TOKEN in the script below
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          set -e
+          set -e # Exit immediately if any command fails
           
           echo "Installing dependencies and CLI..."
           pip install -r requirements.txt --no-cache-dir
           pip install "huggingface_hub[cli]" --no-cache-dir
           
-          # 🚨 CRITICAL FIX: Find the exact user-site package bin path and add it to PATH
-          # This is the most reliable way to find the 'huggingface-cli' executable.
-          export PATH="$(python -m site --user-base)/bin:$PATH"
+          # 🚨 FINAL CRITICAL FIX: Find the exact Python bin directory and force-add it to PATH
+          # This should resolve the 'command not found' error (Exit Code 127).
+          PYTHON_BIN_DIR=$(dirname $(which python))
+          export PATH="$PYTHON_BIN_DIR:$PATH"
+          echo "Updated PATH to include: $PYTHON_BIN_DIR"
           
           echo "Starting deployment via huggingface-cli..."
           
           # 1. Login
-          huggingface-cli login --token ${{ secrets.HF_TOKEN }} --add-to-git-credential
+          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
           
           # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
           huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
