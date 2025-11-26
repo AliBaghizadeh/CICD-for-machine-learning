@@ -1,13 +1,6 @@
 # .github/workflows/cd.yml
 
-name: Continuous Deployment
-on:
-  workflow_run:
-    workflows: ["Continuous Integration"]
-    types:
-      - completed
-
-  workflow_dispatch:
+# ... (Header and job definition remain the same) ...
 
 jobs:
   cd-deploy:
@@ -26,21 +19,34 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Project Dependencies and Hugging Face CLI
-        # Step 1: Install dependencies and CLI.
+      - name: Install and Deploy to Hugging Face (Final Fix) 🚀
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # Determine the user's bin path and set it for this step's execution
+          PYTHON_BIN_PATH: ${{ env.HOME }}/.local/bin
         run: |
+          # CRITICAL FIX: Explicitly add the local bin path to PATH
+          export PATH="$PYTHON_BIN_PATH:$PATH"
+          
+          echo "Installing dependencies and CLI..."
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
           
-      - name: Set PATH for Hugging Face CLI (CRITICAL FIX) 🛠️
-        # Step 2: This command finds the path where pip installed the user binaries 
-        # (usually ~/.local/bin) and adds it to the runner's PATH for subsequent steps.
-        run: |
-          PYTHON_BIN_PATH=$(python -c 'import site; print(site.USER_BASE + "/bin")')
-          echo "$PYTHON_BIN_PATH" >> $GITHUB_PATH
+          echo "Starting deployment via huggingface-cli..."
           
-      - name: Deployment To Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # Step 3: Run make deploy. It should now find the CLI tool.
-        run: make deploy HF_TOKEN=${{ secrets.HF_TOKEN }}
+          # 1. Login (Uses the token correctly set via the env block)
+          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+          
+          # 2. Upload App (Corrected path)
+          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+          
+          # 3. Upload Requirements
+          huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+          
+          # 4. Upload Model
+          huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+          
+          # 5. Upload Results
+          huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+          
+          echo "Deployment complete."
