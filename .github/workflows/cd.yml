@@ -26,14 +26,21 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Final Deployment (Single Shell Execution) 🛠️
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      - name: Install Project Dependencies and Hugging Face CLI
+        # Step 1: Install dependencies and CLI.
         run: |
-          # 1. Install all required dependencies, including the CLI.
-          # This must be in the same block as 'make deploy'.
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
           
-          # 2. Execute the Makefile target (This ensures 'huggingface-cli' is found)
-          make deploy HF_TOKEN=$HF_TOKEN
+      - name: Set PATH for Hugging Face CLI (CRITICAL FIX) 🛠️
+        # Step 2: This command finds the path where pip installed the user binaries 
+        # (usually ~/.local/bin) and adds it to the runner's PATH for subsequent steps.
+        run: |
+          PYTHON_BIN_PATH=$(python -c 'import site; print(site.USER_BASE + "/bin")')
+          echo "$PYTHON_BIN_PATH" >> $GITHUB_PATH
+          
+      - name: Deployment To Hugging Face
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # Step 3: Run make deploy. It should now find the CLI tool.
+        run: make deploy HF_TOKEN=${{ secrets.HF_TOKEN }}
