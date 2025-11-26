@@ -63,11 +63,9 @@ update-branch:
 
 # hf-login: Logs in using the token. Dependencies must be installed in cd.yml step.
 hf-login:
-	git pull origin update
-	git checkout update
 	huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
-	
-# push-hub: Uploads specific files/folders to the Space root, renaming the app file.
+
+# push-hub: (Remains the same with the correct upload paths)
 push-hub:
 	huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
 	huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"

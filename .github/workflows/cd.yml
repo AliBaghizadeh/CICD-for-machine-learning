@@ -27,12 +27,19 @@ jobs:
           python-version: '3.10'
 
       - name: Install Project Dependencies and Hugging Face CLI
-        # This step installs the CLI so it's available in the PATH for the next step.
         run: |
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
+
+      - name: Set PATH for Hugging Face CLI 🛠️
+        # This command appends the local user-installed bin directory (~/.local/bin)
+        # to the GitHub Actions PATH environment, making 'huggingface-cli' available.
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Deployment To Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: make deploy HF_TOKEN=$HF_TOKEN
+        # This step installs the CLI so it's available in the PATH for the next step.
+        
+
