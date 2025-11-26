@@ -33,28 +33,31 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         # The 'run:' block must be correctly indented relative to 'name:'
         run: |
-          # 1. CRITICAL PATH FIX: Explicitly add the local bin path to PATH
+          set -e
           export PATH="$HOME/.local/bin:$PATH"
           
           echo "Installing dependencies and CLI..."
           pip install -r requirements.txt --no-cache-dir
           pip install "huggingface_hub[cli]" --no-cache-dir
           
+          echo "Verifying huggingface-cli installation..."
+          which huggingface-cli || (echo "CLI not in PATH, trying python -m huggingface_hub.cli"; python -m huggingface_hub.cli --help)
+          
           echo "Starting deployment via huggingface-cli..."
           
           # 2. Login
-          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+          python -m huggingface_hub.cli login --token $HF_TOKEN --add-to-git-credential
           
           # 3. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
-          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
+          python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
           
           # 4. Upload Requirements
-          huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+          python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
           # 5. Upload Model (Source: ./Model folder -> Target: /Model folder on Hugging Face)
-          huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+          python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
           
           # 6. Upload Results (Source: ./Results folder -> Target: /Metrics folder on Hugging Face)
-          huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+          python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
           
           echo "Deployment complete."
