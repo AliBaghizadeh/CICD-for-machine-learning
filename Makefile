@@ -61,11 +61,16 @@ update-branch:
 
 # --- Continuous Deployment Targets ---
 
-# deploy: Installs the library and runs the python deployment script
-deploy:
-	# 1. Install the Hugging Face library
-	pip install huggingface_hub
-	
-	# CRITICAL FIX: Use the 'env' command to explicitly set the environment variable 
-    # for the python process, using the value passed as an argument to 'make'.
-	env HF_TOKEN=$(HF_TOKEN) python deploy.py
+# hf-login: Logs in using the token. Dependencies must be installed in cd.yml step.
+hf-login:
+	huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
+
+# push-hub: Uploads specific files/folders to the Space root, renaming the app file.
+push-hub:
+	huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+	huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+	huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+	huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+
+# deploy: Runs the login followed by the push.
+deploy: hf-login push-hub
