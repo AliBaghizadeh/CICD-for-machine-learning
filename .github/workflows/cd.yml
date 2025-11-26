@@ -1,6 +1,14 @@
-# .github/workflows/cd.yml
+name: Continuous Deployment
 
-# ... (Header and job definition remain the same) ...
+on:
+  # 1. Triggered only after the Continuous Integration (CI) workflow completes successfully
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types:
+      - completed
+  
+  # 2. Allows manual running from the GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   cd-deploy:
@@ -12,19 +20,20 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          ref: update
+          ref: main
 
       - name: Set up Python Environment
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install and Deploy to Hugging Face (Final Fix) 🚀
+      - name: Install and Deploy to Hugging Face
+        # ⚠️ CRITICAL: Ensure 'env:' is indented exactly the same as 'name:'
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        # The 'run:' block must be correctly indented relative to 'name:'
         run: |
-          # CRITICAL FIX: Explicitly add the local bin path to PATH
-          # $HOME is a standard shell variable, making this reliable.
+          # 1. CRITICAL PATH FIX: Explicitly add the local bin path to PATH
           export PATH="$HOME/.local/bin:$PATH"
           
           echo "Installing dependencies and CLI..."
@@ -33,19 +42,19 @@ jobs:
           
           echo "Starting deployment via huggingface-cli..."
           
-          # 1. Login
+          # 2. Login
           huggingface-cli login --token $HF_TOKEN --add-to-git-credential
           
-          # 2. Upload App (UI text changes will now deploy)
+          # 3. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
           huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
           
-          # 3. Upload Requirements
+          # 4. Upload Requirements
           huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
-          # 4. Upload Model
+          # 5. Upload Model (Source: ./Model folder -> Target: /Model folder on Hugging Face)
           huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
           
-          # 5. Upload Results
+          # 6. Upload Results (Source: ./Results folder -> Target: /Metrics folder on Hugging Face)
           huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
           
           echo "Deployment complete."
