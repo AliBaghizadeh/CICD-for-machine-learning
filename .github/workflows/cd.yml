@@ -2,34 +2,37 @@
 
 name: Continuous Deployment
 on:
-  # Triggers this workflow when the 'Continuous Integration' workflow completes.
   workflow_run:
-    # IMPORTANT: Ensure "Continuous Integration" matches the exact name 
-    # defined at the top of your ci.yml file.
-    workflows: ["Continuous Integration"] 
+    workflows: ["Continuous Integration"]
     types:
       - completed
 
-  # Allows manual triggering from the GitHub Actions tab
   workflow_dispatch:
 
 jobs:
   cd-deploy:
     runs-on: ubuntu-latest
-    # This CD job should only run if the CI job succeeded
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     
     steps:
-      # Checkout the code with a token that has permissions (needed for the git pull/checkout in Makefile)
-      - name: Checkout Code
+      - name: Checkout Update Branch
         uses: actions/checkout@v4
         with:
-          # We use the GITHUB_TOKEN here
           token: ${{ secrets.GITHUB_TOKEN }}
+          ref: update # Checkout the 'update' branch where the model lives
+
+      - name: Set up Python Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Project Dependencies and Hugging Face CLI
+        # This step installs the CLI so it's available in the PATH for the next step.
+        run: |
+          pip install -r requirements.txt
+          pip install "huggingface_hub[cli]"
 
       - name: Deployment To Hugging Face
         env:
-          # Pass the Hugging Face token secret to the make command
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # Execute the make deploy command, passing the token as a variable
         run: make deploy HF_TOKEN=$HF_TOKEN

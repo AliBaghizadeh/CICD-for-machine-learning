@@ -61,23 +61,18 @@ update-branch:
 
 # --- Continuous Deployment Targets ---
 
-# hf-login: Installs Hugging Face CLI and logs in using the secret token.
-# Note: The 'git pull' and 'git switch' commands are from the course material 
-# push-hub: Uploads specific files/folders to the Space root, renaming the app file.
-# hf-login: Installs Hugging Face CLI and logs in using the secret token.
+# hf-login: Logs in using the token. Dependencies must be installed in cd.yml step.
 hf-login:
 	git pull origin update
 	git checkout update
-	# FIX: Run the CLI via python -m to avoid "command not found" path issues
-	pip install -U "huggingface_hub[cli]" && python -m huggingface_hub.cli login --token $(HF_TOKEN) --add-to-git-credential
-
-# push-hub: Uploads specific files/folders to the Space root.
+	huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
+	
+# push-hub: Uploads specific files/folders to the Space root, renaming the app file.
 push-hub:
-	# FIX: Use 'python -m huggingface_hub.cli' for all upload commands
-	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
-	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
-	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
-	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+	huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+	huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+	huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+	huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
 
 # deploy: Runs the login followed by the push.
 deploy: hf-login push-hub
