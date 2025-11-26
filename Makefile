@@ -66,24 +66,18 @@ update-branch:
 # push-hub: Uploads specific files/folders to the Space root, renaming the app file.
 # hf-login: Installs Hugging Face CLI and logs in using the secret token.
 hf-login:
-    # Use 'git pull' and 'git checkout' as separate steps (they don't affect shell path)
 	git pull origin update
 	git checkout update
-    
-    # CRITICAL FIX: Combine install and login into one line so the newly installed 
-    # CLI is immediately available in the PATH for the next command.
-	pip install -U "huggingface_hub[cli]" && huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
-	
+	# FIX: Run the CLI via python -m to avoid "command not found" path issues
+	pip install -U "huggingface_hub[cli]" && python -m huggingface_hub.cli login --token $(HF_TOKEN) --add-to-git-credential
+
+# push-hub: Uploads specific files/folders to the Space root.
 push-hub:
-    # 1. Upload the application file (App/energy_app.py) and rename it to app.py in the Space root
-	huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
-    
-    # 2. Upload the requirements file to the Space root
-	huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
-    
-    # 3. Upload Model and Results folders
-	huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
-	huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+	# FIX: Use 'python -m huggingface_hub.cli' for all upload commands
+	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+	python -m huggingface_hub.cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
 
 # deploy: Runs the login followed by the push.
 deploy: hf-login push-hub
