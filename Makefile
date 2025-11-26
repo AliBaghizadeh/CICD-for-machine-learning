@@ -58,3 +58,24 @@ update-branch:
 
 	# Push the committed changes to the 'update' branch
 	git push --force origin HEAD:update
+
+# --- Continuous Deployment Targets ---
+
+# hf-login: Installs Hugging Face CLI and logs in using the secret token.
+# Note: The 'git pull' and 'git switch' commands are from the course material 
+# but are often redundant when using the workflow_run trigger.
+hf-login:
+	git pull origin update
+	git checkout update
+	pip install -U "huggingface_hub[cli]"
+	huggingface-cli login --token $(HF_TOKEN) --add-to-git-credential
+
+# push-hub: Uploads the App, Model, and Results folders to the Hugging Face Space.
+push-hub:
+	# CRITICAL: Replace 'alibaghizade/time_series_energy' with your actual Hugging Face Space name
+	huggingface-cli upload alibaghizade/time_series_energy ./App --repo-type=space --commit-message="Sync App files"
+	huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+	huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+
+# deploy: Runs the login followed by the push.
+deploy: hf-login push-hub
