@@ -47,7 +47,7 @@ jobs:
           echo "Starting deployment via Hugging Face Python API..."
           
           # CRITICAL FIX: Use the bash Heredoc syntax with <<- 'DELIMITER' to correctly pass 
-          # a multiline Python script to the interpreter, solving the YAML syntax error.
+          # a multiline Python script to the interpreter.
           python <<- 'EOP'
 import os
 import sys
