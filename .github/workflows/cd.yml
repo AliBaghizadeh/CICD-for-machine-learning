@@ -31,25 +31,30 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          set -e
-    
+          set -e # Exit immediately if any command fails
+          
           echo "Installing dependencies and CLI..."
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
+  
           
           # Find where huggingface-cli was installed
           HF_CLI=$(which huggingface-cli || find /opt/hostedtoolcache/Python/*/x64/bin/ -name "huggingface-cli" 2>/dev/null | head -n 1)
           
           echo "Found CLI at: $HF_CLI"
           
+          # Execute the CLI using the explicit Python module command.
+          # This guarantees execution without relying on $PATH or a specific bin directory.
+          HF_CLI_COMMAND="python -m huggingface_hub.commands.huggingface_cli"
+          
+          echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+          
           # 1. Login using the Python module command
-          #$HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
-          $HF_CLI login --token $HF_TOKEN --add-to-git-credential
+          $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
           
           # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
-          #$HF_CLI_COMMAND upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
-          $HF_CLI upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
-
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
+          
           # 3. Upload Requirements
           $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
