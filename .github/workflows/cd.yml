@@ -39,7 +39,7 @@ jobs:
           
           # Execute the CLI using the explicit Python module command.
           # This guarantees execution without relying on $PATH or a specific bin directory.
-          HF_CLI_COMMAND="python -m huggingface_hub.commands.huggingface_cli"
+          HF_CLI_COMMAND="python -m huggingface_hub.cli"
           
           echo "Starting deployment via Python module: $HF_CLI_COMMAND"
           
