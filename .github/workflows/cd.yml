@@ -6,20 +6,22 @@ on:
     workflows: ["Continuous Integration"]
     types:
       - completed
+    # Filter: Only run CD if the CI succeeded on the main branch
+    branches:
+      - main
   # Allows manual running from the GitHub Actions UI
   workflow_dispatch:
 
 jobs:
   cd-deploy:
     runs-on: ubuntu-latest
-    # Only run if the triggering CI workflow was successful
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    
+    # Run only if triggered manually OR if the previous CI workflow succeeded
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - name: Checkout Update Branch
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
           # Check out the 'update' branch which contains the committed Model and Results
           ref: update
 
@@ -28,53 +30,46 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install and Deploy to Hugging Face via Python API 🚀
+      - name: Install and Deploy to Hugging Face 🚀
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           REPO_ID: alibaghizade/time_series_energy
           REPO_TYPE: space
-        # CRITICAL FIX: Use the YAML Literal Block Scalar (|) for reliable multiline script execution.
+
         run: |
           set -e
           
-          # 1. Install dependencies, forcing a re-installation to ensure the package is ready
-          echo "Installing core dependencies and huggingface_hub..."
-          # Use python -m pip to ensure packages are installed for the active interpreter
-          python -m pip install --force-reinstall --no-cache-dir -r requirements.txt
-          python -m pip install --force-reinstall --no-cache-dir "huggingface_hub[cli]"
+          echo "Installing dependencies..."
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install "huggingface_hub[cli]"
 
-          # 2. Execute deployment using the stable Python API
-          echo "Starting deployment via Hugging Face Python API..."
+          echo "Starting deployment..."
           
-          # CRITICAL FIX: Use the bash Heredoc syntax with <<- 'DELIMITER' to correctly pass 
-          # a multiline Python script to the interpreter.
-          python <<- 'EOP'
+          # Use the bash Heredoc syntax with <<'DELIMITER' (no hyphen) for reliable execution.
+          # The Python code below must be flush left to prevent IndentationErrors.
+          python <<'EOP'
 import os
 import sys
 from huggingface_hub import login, upload_file, upload_folder
 from pathlib import Path
 
-# Repository details taken from environment variables
 REPO_ID = os.environ['REPO_ID']
 REPO_TYPE = os.environ['REPO_TYPE']
 
+def check_dir(path):
+    if not Path(path).is_dir():
+        print(f"Warning: Directory '{path}' not found. Skipping.")
+        return False
+    return True
+
 def deploy_app():
-    # Helper to check if a directory is valid before attempting to upload
-    def check_dir(path):
-        if not Path(path).is_dir():
-            print(f"Warning: Directory '{path}' not found. Skipping upload.")
-            return False
-        return True
-
     try:
-        # 1. Login using the token (essential for non-anonymous operations)
-        print('-> Logging in to Hugging Face Hub...')
-        # Note: add_to_git_credential is False as we are in a temporary CI runner
+        print("Logging in...")
         login(token=os.environ['HF_TOKEN'], add_to_git_credential=False)
-        print('-> Login successful.')
 
-        # 2. Upload App file (./App/energy_app.py -> app.py)
-        print('-> Uploading App...')
+        # 1. Upload App file (./App/energy_app.py -> app.py)
+        print("Uploading app (App/energy_app.py -> app.py)...")
         upload_file(
             path_or_fileobj='./App/energy_app.py',
             path_in_repo='app.py',
@@ -82,10 +77,9 @@ def deploy_app():
             repo_type=REPO_TYPE,
             commit_message='Deploy App'
         )
-        print('-> App uploaded.')
 
-        # 3. Upload Requirements
-        print('-> Syncing requirements.txt...')
+        # 2. Upload Requirements
+        print("Syncing requirements.txt...")
         upload_file(
             path_or_fileobj='./requirements.txt',
             path_in_repo='requirements.txt',
@@ -93,11 +87,10 @@ def deploy_app():
             repo_type=REPO_TYPE,
             commit_message='Sync Requirements'
         )
-        print('-> requirements.txt synced.')
 
-        # 4. Upload Model directory (Model/ -> /Model)
+        # 3. Upload Model directory (Model/ -> /Model)
         if check_dir('./Model'):
-            print('-> Uploading Model directory...')
+            print("Uploading Model directory...")
             upload_folder(
                 folder_path='./Model',
                 repo_id=REPO_ID,
@@ -105,21 +98,19 @@ def deploy_app():
                 path_in_repo='Model',
                 commit_message='Sync Model'
             )
-            print('-> Model directory uploaded.')
 
-        # 5. Upload Results directory (Results/ -> /Metrics)
+        # 4. Upload Results directory (Results/ -> /Metrics)
         if check_dir('./Results'):
-            print('-> Uploading Results directory...')
+            print("Uploading Results directory...")
             upload_folder(
                 folder_path='./Results',
                 repo_id=REPO_ID,
                 repo_type=REPO_TYPE,
                 path_in_repo='Metrics', # Renaming the directory to Metrics on the Hub
-                commit_message='Sync Metrics and Report'
+                commit_message='Sync Metrics'
             )
-            print('-> Results directory uploaded.')
 
-        print('\n✅ Deployment to Hugging Face Hub complete.')
+        print("\n✅ Deployment complete")
 
     except Exception as e:
         print(f"🔴 Deployment failed: {e}", file=sys.stderr)
