@@ -27,37 +27,36 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install and Deploy to Hugging Face
+      - name: Install and Deploy to Hugging Face (Final Fix) 🚀
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          # Higging Face HF_TOKEN
+          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
+          # Determine the user's bin path and set it for this step's execution
+          PYTHON_BIN_PATH: $HOME/.local/bin
         run: |
-          set -e # Exit immediately if any command fails
+          # CRITICAL FIX: Explicitly add the local bin path to PATH
+          export PATH="$PYTHON_BIN_PATH:$PATH"
           
           echo "Installing dependencies and CLI..."
-          pip install -r requirements.txt --no-cache-dir
-          pip install "huggingface_hub[cli]" --no-cache-dir
-          
-          # 🚨 FINAL CRITICAL FIX: Find the exact Python bin directory and force-add it to PATH
-          # This should resolve the 'command not found' error (Exit Code 127).
-          PYTHON_BIN_DIR=$(dirname $(which python))
-          export PATH="$PYTHON_BIN_DIR:$PATH"
-          echo "Updated PATH to include: $PYTHON_BIN_DIR"
+          pip install -r requirements.txt
+          pip install "huggingface_hub[cli]"
           
           echo "Starting deployment via huggingface-cli..."
           
-          # 1. Login
+          # 1. Login (Uses the shell variable $HF_TOKEN set on line 34)
+          # Line 50: Changed ${{ secrets.HF_TOKEN }} to $HF_TOKEN
           huggingface-cli login --token $HF_TOKEN --add-to-git-credential
           
-          # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
-          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App with UI Update"
+          # 2. Upload App (We will use a new commit message to force a UI change trigger)
+          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
           
           # 3. Upload Requirements
           huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
-          # 4. Upload Model (Source: ./Model folder -> Target: /Model folder on Hugging Face)
+          # 4. Upload Model
           huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
           
-          # 5. Upload Results (Source: ./Results folder -> Target: /Metrics folder on Hugging Face)
+          # 5. Upload Results
           huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
           
           echo "Deployment complete."
