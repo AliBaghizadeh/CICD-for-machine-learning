@@ -28,16 +28,12 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          set -e # Exit immediately if any command fails
-
-          echo "Installing dependencies..."
-          pip install -r requirements.txt
-          pip install "huggingface_hub[cli]"
+          # ... (installation steps)
           
           # 🚨 FINAL STABLE FIX: Execute CLI via Python module to bypass PATH issues.
-          # This replaces the failing 'make deploy' command.
           HF_CLI_COMMAND="python -m huggingface_hub.cli"
-          echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+          # ...
+          $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
 
           # 1. Login
           $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
