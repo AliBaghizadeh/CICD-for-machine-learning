@@ -27,36 +27,35 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install and Deploy to Hugging Face (Final Fix) 🚀
+      - name: Install and Deploy to Hugging Face
         env:
-          # Higging Face HF_TOKEN
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} 
-          # Determine the user's bin path and set it for this step's execution
-          PYTHON_BIN_PATH: $HOME/.local/bin
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          # CRITICAL FIX: Explicitly add the local bin path to PATH
-          export PATH="$PYTHON_BIN_PATH:$PATH"
+          set -e # Exit immediately if any command fails
+          
+          # Define the absolute path to the CLI executable and use it explicitly.
+          # This guarantees the command is found regardless of the shell's PATH variable.
+          HF_CLI_BIN="$HOME/.local/bin/huggingface-cli"
           
           echo "Installing dependencies and CLI..."
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
           
-          echo "Starting deployment via huggingface-cli..."
+          echo "Starting deployment via absolute path: $HF_CLI_BIN"
           
-          # 1. Login (Uses the shell variable $HF_TOKEN set on line 34)
-          # Line 50: Changed ${{ secrets.HF_TOKEN }} to $HF_TOKEN
-          huggingface-cli login --token $HF_TOKEN --add-to-git-credential
+          # 1. Login using the absolute path
+          $HF_CLI_BIN login --token $HF_TOKEN --add-to-git-credential
           
-          # 2. Upload App (We will use a new commit message to force a UI change trigger)
-          huggingface-cli upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
+          # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
+          $HF_CLI_BIN upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
           
           # 3. Upload Requirements
-          huggingface-cli upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+          $HF_CLI_BIN upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
           # 4. Upload Model
-          huggingface-cli upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+          $HF_CLI_BIN upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
           
           # 5. Upload Results
-          huggingface-cli upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+          $HF_CLI_BIN upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
           
           echo "Deployment complete."
