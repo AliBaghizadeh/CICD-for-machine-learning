@@ -33,7 +33,10 @@ jobs:
           echo "--- 1. Installation ---"
           # Install all dependencies (using python -m pip for environment correctness)
           python -m pip install -r requirements.txt
-          python -m pip install "huggingface_hub[cli]"
+          
+          # 🚨 CRITICAL FIX: Use --force-reinstall to bypass "Requirement already satisfied"
+          # This ensures the executable script is physically written to the bin directory
+          python -m pip install "huggingface_hub[cli]" --no-cache-dir --upgrade --force-reinstall
           
           # 🚨 DEBUG FLAG: Print all commands and arguments before they are executed
           set -x
@@ -47,6 +50,7 @@ jobs:
           # 2b. Check if the file exists. If not, use 'find' as a fallback.
           if [ ! -f "$HF_CLI_PATH" ]; then
             echo "Primary path not found. Starting broad search..."
+            # Note: The search starts from the runner's home directory.
             HF_CLI_PATH=$(find $HOME -name "huggingface-cli" -type f -print -quit)
             
             if [ -z "$HF_CLI_PATH" ]; then
