@@ -30,17 +30,39 @@ jobs:
         run: |
           set -e # Exit immediately if any command fails
 
-          echo "Installing dependencies..."
-          # Use 'python -m pip' to guarantee installation into the active environment
+          echo "--- 1. Installation ---"
+          # Install all dependencies (using python -m pip for environment correctness)
           python -m pip install -r requirements.txt
           python -m pip install "huggingface_hub[cli]"
           
-          # Stable Execution Command (bypasses shell PATH issues)
-          #HF_CLI_COMMAND="python -m huggingface_hub.cli"
-          #echo "Starting deployment via Python module: $HF_CLI_COMMAND"
-          HF_CLI_COMMAND="python -m huggingface_hub"
-          echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+          # 🚨 DEBUG FLAG: Print all commands and arguments before they are executed
+          set -x
+          
+          echo "--- 2. Find and Verify CLI Path ---"
+          
+          # 2a. Find the site-packages script directory (primary location)
+          SCRIPT_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
+          HF_CLI_PATH="$SCRIPT_DIR/huggingface-cli"
+          
+          # 2b. Check if the file exists. If not, use 'find' as a fallback.
+          if [ ! -f "$HF_CLI_PATH" ]; then
+            echo "Primary path not found. Starting broad search..."
+            HF_CLI_PATH=$(find $HOME -name "huggingface-cli" -type f -print -quit)
+            
+            if [ -z "$HF_CLI_PATH" ]; then
+              echo "🔴 ERROR: Could not locate the 'huggingface-cli' executable anywhere on the system."
+              exit 1
+            fi
+            echo "✅ Fallback search successful."
+          else
+            echo "✅ Primary path found."
+          fi
+          
+          echo "EXECUTABLE FOUND AT: $HF_CLI_PATH"
+          HF_CLI_COMMAND="$HF_CLI_PATH"
 
+          echo "--- 3. Deployment (using verified path) ---"
+          
           # 1. Login
           $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
           
