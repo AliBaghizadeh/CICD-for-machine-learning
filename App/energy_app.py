@@ -27,7 +27,8 @@ def engineer_time_features():
     
     # 2. Extract standard time features (ensure these match your train.py logic!)
     hour = target_time.hour
-    day_of_week = target_time.dayofweek  # Monday=0, Sunday=6
+    #day_of_week = target_time.dayofweek  # Monday=0, Sunday=6
+    day_of_week = target_time.weekday()
     month = target_time.month
     
     # Example: If your model used an 'Is_Weekend' feature
