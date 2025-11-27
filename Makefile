@@ -23,11 +23,11 @@ eval:
 	echo "### 📊 Performance Metrics (Time Series Regression)" >> report.md
 	# This command grabs the metrics you saved in train.py (MAE and R2)
 	cat ./Results/metrics.txt >> report.md
-   
+	
 	echo '\n### 📉 Forecast Visualization' >> report.md
 	# CML displays the image saved by train.py in the GitHub comment
 	echo '![Forecast vs Actual](./Results/model_results.png)' >> report.md
-   
+	
 	# Uses the CML command to post the report.md content as a comment on the GitHub commit
 	cml comment create report.md
 
