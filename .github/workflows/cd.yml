@@ -33,29 +33,29 @@ jobs:
         run: |
           set -e # Exit immediately if any command fails
           
-          # Define the absolute path to the CLI executable and use it explicitly.
-          # This guarantees the command is found regardless of the shell's PATH variable.
-          HF_CLI_BIN="$HOME/.local/bin/huggingface-cli"
-          
           echo "Installing dependencies and CLI..."
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
           
-          echo "Starting deployment via absolute path: $HF_CLI_BIN"
+          # Execute the CLI using the explicit Python module command.
+          # This guarantees execution without relying on $PATH or a specific bin directory.
+          HF_CLI_COMMAND="python -m huggingface_hub.commands.huggingface_cli"
           
-          # 1. Login using the absolute path
-          $HF_CLI_BIN login --token $HF_TOKEN --add-to-git-credential
+          echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+          
+          # 1. Login using the Python module command
+          $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
           
           # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
-          $HF_CLI_BIN upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Force UI Update (App Logic)"
           
           # 3. Upload Requirements
-          $HF_CLI_BIN upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
           
           # 4. Upload Model
-          $HF_CLI_BIN upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
           
           # 5. Upload Results
-          $HF_CLI_BIN upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
           
           echo "Deployment complete."
