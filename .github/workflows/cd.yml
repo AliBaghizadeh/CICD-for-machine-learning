@@ -31,11 +31,10 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          set -e # Exit immediately if any command fails
-          
-          echo "Installing dependencies and CLI..."
-          pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
+          which huggingface-cli || echo "CLI not found in PATH"
+          ls -la ~/.local/bin/ || echo "No .local/bin"
+          ls -la /opt/hostedtoolcache/Python/3.10.19/x64/bin/ | grep hugging || echo "Not in Python bin"
           
           # Execute the CLI using the explicit Python module command.
           # This guarantees execution without relying on $PATH or a specific bin directory.
