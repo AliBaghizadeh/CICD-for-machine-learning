@@ -34,8 +34,7 @@ jobs:
           # Install all dependencies (using python -m pip for environment correctness)
           python -m pip install -r requirements.txt
           
-          # 🚨 CRITICAL FIX: Use --force-reinstall to bypass "Requirement already satisfied"
-          # This ensures the executable script is physically written to the bin directory
+          # 🚨 CRITICAL FIX: Use --force-reinstall to ensure the executable script is physically written
           python -m pip install "huggingface_hub[cli]" --no-cache-dir --upgrade --force-reinstall
           
           # 🚨 DEBUG FLAG: Print all commands and arguments before they are executed
@@ -43,23 +42,35 @@ jobs:
           
           echo "--- 2. Find and Verify CLI Path ---"
           
-          # 2a. Find the site-packages script directory (primary location)
-          SCRIPT_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
-          HF_CLI_PATH="$SCRIPT_DIR/huggingface-cli"
+          HF_CLI_PATH=""
           
-          # 2b. Check if the file exists. If not, use 'find' as a fallback.
-          if [ ! -f "$HF_CLI_PATH" ]; then
-            echo "Primary path not found. Starting broad search..."
-            # Note: The search starts from the runner's home directory.
-            HF_CLI_PATH=$(find $HOME -name "huggingface-cli" -type f -print -quit)
-            
-            if [ -z "$HF_CLI_PATH" ]; then
-              echo "🔴 ERROR: Could not locate the 'huggingface-cli' executable anywhere on the system."
-              exit 1
-            fi
-            echo "✅ Fallback search successful."
+          # 2a. Check 1: Primary installation directory (from sysconfig)
+          PRIMARY_PATH=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")/huggingface-cli
+          
+          if [ -f "$PRIMARY_PATH" ]; then
+              HF_CLI_PATH="$PRIMARY_PATH"
+              echo "✅ Primary path found."
           else
-            echo "✅ Primary path found."
+              echo "Primary path not found. Checking local user path..."
+              
+              # 2b. Check 2: User local binary directory ($HOME/.local/bin)
+              LOCAL_USER_PATH="$HOME/.local/bin/huggingface-cli"
+              if [ -f "$LOCAL_USER_PATH" ]; then
+                  HF_CLI_PATH="$LOCAL_USER_PATH"
+                  echo "✅ Local user path found."
+              else
+                  echo "Local user path not found. Starting broad search..."
+                  
+                  # 2c. Check 3: Broad search (searches entire filesystem)
+                  # Errors are redirected to /dev/null to prevent long log output from restricted directories
+                  HF_CLI_PATH=$(find / -name "huggingface-cli" -type f -print -quit 2>/dev/null)
+                  
+                  if [ -z "$HF_CLI_PATH" ]; then
+                      echo "🔴 ERROR: Could not locate the 'huggingface-cli' executable anywhere on the system."
+                      exit 1
+                  fi
+                  echo "✅ Broad search successful."
+              fi
           fi
           
           echo "EXECUTABLE FOUND AT: $HF_CLI_PATH"
