@@ -46,8 +46,9 @@ jobs:
           # 2. Execute deployment using the stable Python API
           echo "Starting deployment via Hugging Face Python API..."
           
-          # The Python script is executed directly, relying on the '|' scalar for proper indentation.
-          python -c "
+          # CRITICAL FIX: Use the bash Heredoc syntax with <<- 'DELIMITER' to correctly pass 
+          # a multiline Python script to the interpreter, solving the YAML syntax error.
+          python <<- 'EOP'
 import os
 import sys
 from huggingface_hub import login, upload_file, upload_folder
@@ -61,7 +62,7 @@ def deploy_app():
     # Helper to check if a directory is valid before attempting to upload
     def check_dir(path):
         if not Path(path).is_dir():
-            print(f\"Warning: Directory '{path}' not found. Skipping upload.\")
+            print(f"Warning: Directory '{path}' not found. Skipping upload.")
             return False
         return True
 
@@ -121,9 +122,9 @@ def deploy_app():
         print('\n✅ Deployment to Hugging Face Hub complete.')
 
     except Exception as e:
-        print(f\"🔴 Deployment failed: {e}\", file=sys.stderr)
+        print(f"🔴 Deployment failed: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == '__main__':
     deploy_app()
-"
+EOP
