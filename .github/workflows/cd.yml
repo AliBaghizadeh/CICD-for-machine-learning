@@ -31,12 +31,14 @@ jobs:
           set -e # Exit immediately if any command fails
 
           echo "Installing dependencies..."
-          # 🚨 FIX: Use 'python -m pip' to guarantee installation into the active environment
+          # Use 'python -m pip' to guarantee installation into the active environment
           python -m pip install -r requirements.txt
           python -m pip install "huggingface_hub[cli]"
           
           # Stable Execution Command (bypasses shell PATH issues)
-          HF_CLI_COMMAND="python -m huggingface_hub.cli"
+          #HF_CLI_COMMAND="python -m huggingface_hub.cli"
+          #echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+          HF_CLI_COMMAND="python -m huggingface_hub"
           echo "Starting deployment via Python module: $HF_CLI_COMMAND"
 
           # 1. Login
