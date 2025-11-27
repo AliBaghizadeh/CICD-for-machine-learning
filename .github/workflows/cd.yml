@@ -24,18 +24,34 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies & Fix PATH 🛠️
+      - name: Install Dependencies & Deploy to Hugging Face 🚀
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          set -e # Exit immediately if any command fails
+
+          echo "Installing dependencies..."
           pip install -r requirements.txt
           pip install "huggingface_hub[cli]"
           
-          # CRITICAL: Get the exact path where pip installed the scripts (like huggingface-cli)
-          # and add it to the system PATH so 'make' can find it.
-          SCRIPT_PATH=$(python -c "import sysconfig; print(sysconfig.get_path('scripts'))")
-          echo "$SCRIPT_PATH" >> $GITHUB_PATH
+          # 🚨 FINAL STABLE FIX: Execute CLI via Python module to bypass PATH issues.
+          # This replaces the failing 'make deploy' command.
+          HF_CLI_COMMAND="python -m huggingface_hub.cli"
+          echo "Starting deployment via Python module: $HF_CLI_COMMAND"
+
+          # 1. Login
+          $HF_CLI_COMMAND login --token $HF_TOKEN --add-to-git-credential
           
-      - name: Deploy to Hugging Face
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        # Now we just call make. The PATH is fixed, so huggingface-cli will work.
-        run: make deploy
+          # 2. Upload App (Source path: ./App/energy_app.py -> Target file: app.py)
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./App/energy_app.py app.py --repo-type=space --commit-message="Deploy App"
+          
+          # 3. Upload Requirements
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./requirements.txt requirements.txt --repo-type=space --commit-message="Sync Requirements"
+          
+          # 4. Upload Model
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./Model /Model --repo-type=space --commit-message="Sync Model"
+          
+          # 5. Upload Results
+          $HF_CLI_COMMAND upload alibaghizade/time_series_energy ./Results /Metrics --repo-type=space --commit-message="Sync Metrics and Report"
+          
+          echo "Deployment complete."
