@@ -1,0 +1,63 @@
+# File: .github/workflows/ci.yml
+
+name: Continuous Integration
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+  
+permissions: write-all # CRITICAL for CML to post the report comment
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # --- CRITICAL FIX: Add write permission for the GITHUB_TOKEN ---
+    permissions:
+      contents: write 
+    # ------------------------------------------------------------------
+    steps:
+      # 1. Checkout Code
+      - name: Checkout Code with Write Permissions
+        uses: actions/checkout@v4
+        with:
+          # Pass the default GITHUB_TOKEN which grants write permission for the push back
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      # 2. Setup CML (This installs CML and necessary Node.js dependencies)
+      - uses: iterative/setup-cml@v2 
+      
+      # 3. Install Python Packages
+      - name: Install Packages
+        run: make install
+        
+      # 4. Format Code (Requires 'black' in requirements.txt)
+      - name: Format
+        run: make format
+        
+      # 5. Train Model
+      - name: Train
+        run: make train
+        
+      # 6. Evaluation and Reporting
+      - name: Evaluation
+        env:
+          # This token grants CML permission to write the comment on the PR/commit
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make eval
+
+
+      # 7
+      - name: Update Branch
+        # This step checks out the code again to ensure clean commit
+        uses: actions/checkout@v4
+        with:
+          # Use a token with permissions for pushing
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Commit and Push Results to 'update' Branch
+        env:
+          # Pass the secrets created in Step 1.B as environment variables to the make command
+          USER_NAME: ${{ secrets.USER_NAME }}
+          USER_EMAIL: ${{ secrets.USER_EMAIL }}
+        run: make update-branch USER_NAME=$USER_NAME USER_EMAIL=$USER_EMAIL

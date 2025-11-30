@@ -1,0 +1,11 @@
+# Core MLOps Dependencies
+scikit-learn
+skops
+
+# Time Series & XGBoost Dependencies
+pandas
+numpy
+xgboost
+
+# Application Deployment (Matching your README.md)
+gradio
