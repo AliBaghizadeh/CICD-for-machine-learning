@@ -71,20 +71,6 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
         return "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded"
     
     # Encode Country ID
-    id_map = {"AT": 0, "DE": 1, "FR": 2, "IT": 3, "BE": 4, "CH": 5, "NL": 6, "PL": 7, "CZ": 8, "ES": 9}
-    id_encoded = id_map.get(country_id, 0)
-    
-    # Calculate time features
-    time_features = engineer_time_features()
-    
-    # Create feature array
-    num_features = 45  # Adjust based on your actual feature count
-    input_features = np.zeros((1, num_features))
-    
-    input_features[0, 0] = last_load
-    input_features[0, 1] = current_temp
-    input_features[0, 2] = id_encoded
-    input_features[0, 3:3 + len(time_features)] = time_features
     
     # Scale features
     try:
