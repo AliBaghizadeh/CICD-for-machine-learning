@@ -44,6 +44,115 @@ for name, path in MODELS.items():
         loaded_models[name] = None
 
 try:
+    scaler = joblib.load(SCALER_PATH)
+    print("✅ Scaler loaded")
+except Exception as e:
+    print(f"❌ Failed to load scaler: {e}")
+    scaler = None
+
+# Feature engineering function
+def engineer_time_features():
+    """Calculates time features for the next hour (t+1)."""
+    target_time = datetime.now() + timedelta(hours=1)
+    
+    hour = target_time.hour
+    day_of_week = target_time.weekday()
+    month = target_time.month
+    is_weekend = 1 if day_of_week >= 5 else 0
+    
+    return [hour, day_of_week, month, is_weekend]
+
+# Prediction function
+def predict_all_models(last_load: float, current_temp: float, country_id: str):
+    print(f"Received request: Load={last_load}, Temp={current_temp}, Country={country_id}")
+    
+    if scaler is None:
+        return "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded"
+    
+    # Encode Country ID
+    id_map = {"AT": 0, "DE": 1, "FR": 2, "IT": 3, "BE": 4, "CH": 5, "NL": 6, "PL": 7, "CZ": 8, "ES": 9}
+    id_encoded = id_map.get(country_id, 0)
+    
+    # Calculate time features
+    time_features = engineer_time_features()
+    
+    # Create feature array
+    num_features = 21  # Correct feature count from training
+    input_features = np.zeros((1, num_features))
+    
+    # Assign features (ensure indices match training data structure)
+    # Index 2: temperature
+    input_features[0, 2] = current_temp
+    
+    # Index 9: is_weekend (from time_features[3])
+    input_features[0, 9] = time_features[3]
+    
+    # Index 10-15: Cyclic features
+    hour = time_features[0]
+    day_of_week = time_features[1]
+    month = time_features[2]
+    
+    input_features[0, 10] = np.sin(2 * np.pi * hour / 24) # hour_sin
+    input_features[0, 11] = np.cos(2 * np.pi * hour / 24) # hour_cos
+    input_features[0, 12] = np.sin(2 * np.pi * day_of_week / 7) # dayofweek_sin
+    input_features[0, 13] = np.cos(2 * np.pi * day_of_week / 7) # dayofweek_cos
+    input_features[0, 14] = np.sin(2 * np.pi * month / 12) # month_sin
+    input_features[0, 15] = np.cos(2 * np.pi * month / 12) # month_cos
+    
+    # Index 16: target_lag_1 (Last known load)
+    input_features[0, 16] = last_load
+    
+    # Index 20: id_encoded
+    input_features[0, 20] = id_encoded
+    
+    # Scale features
+    try:
+        input_scaled = scaler.transform(input_features)
+    except Exception as e:
+        print(f"Scaling error: {e}")
+        return f"❌ Scaling error: {e}", f"❌ Scaling error: {e}", f"❌ Scaling error: {e}"
+    
+    # Get predictions from all models
+    results = {}
+    raw_preds = {}
+    
+    for name, model in loaded_models.items():
+        if model is None:
+            results[name] = "❌ Model not loaded"
+            raw_preds[name] = 0.0
+        else:
+            try:
+                prediction = model.predict(input_scaled)[0]
+                mae = MODEL_PERFORMANCE[name]
+                results[name] = f"**{prediction:,.2f} MW**\n\n📊 Model MAE: {mae:.2f} MW"
+                raw_preds[name] = float(prediction)
+            except Exception as e:
+                print(f"{name} error: {e}")
+                results[name] = f"❌ Prediction error: {e}"
+                raw_preds[name] = 0.0
+    
+    # Log request
+    try:
+        with open(LOG_FILE, "a", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                datetime.now().isoformat(),
+                last_load,
+                current_temp,
+                country_id,
+                raw_preds.get("XGBoost", 0),
+                raw_preds.get("LightGBM", 0),
+                raw_preds.get("CatBoost", 0)
+            ])
+    except Exception as e:
+        print(f"Logging failed: {e}")
+    
+    return results["XGBoost"], results["LightGBM"], results["CatBoost"]
+
+# Monitoring Dashboard Functions
+def get_recent_logs():
+    if not LOG_FILE.exists():
+        return pd.DataFrame()
     try:
         df = pd.read_csv(LOG_FILE)
         return df.tail(20).iloc[::-1]  # Show last 20, newest first
