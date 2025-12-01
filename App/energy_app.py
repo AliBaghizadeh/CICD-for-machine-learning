@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import os
 import csv
+from weather_api import fetch_current_temperature
 
 # Model paths
 MODEL_DIR = Path("./Model")
@@ -230,6 +231,31 @@ def plot_temp_dist():
         return None
 
 
+# Weather API Integration
+def fetch_weather_for_country(country_id: str):
+    """
+    Fetch current weather for a country and return temperature + status message.
+    
+    Returns:
+        tuple: (temperature: float, status_message: str)
+    """
+    weather_data = fetch_current_temperature(country_id)
+    
+    if weather_data is None:
+        return (
+            15.0,  # Default fallback temperature
+            "⚠️ Could not fetch weather data. Using default temperature.",
+        )
+    
+    temp = weather_data["temperature"]
+    city = weather_data["city"]
+    description = weather_data["description"]
+    
+    status_msg = f"✅ Fetched from {city}: {temp}°C ({description})"
+    
+    return temp, status_msg
+
+
 # Gradio Interface
 with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as demo:
     gr.Markdown(
@@ -249,14 +275,22 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
                     last_load = gr.Slider(
                         0, 10000, step=1, label="Last Known Load (MW)", value=5000
                     )
-                    current_temp = gr.Slider(
-                        -20, 40, step=0.1, label="Current Temperature (°C)", value=15.0
-                    )
+                    
                     country_id = gr.Radio(
                         ["AT", "DE", "FR", "IT", "BE", "CH", "NL", "PL", "CZ", "ES"],
                         label="Country ID",
                         value="DE",
                     )
+                    
+                    with gr.Row():
+                        fetch_weather_btn = gr.Button("🌤️ Fetch Current Weather", size="sm")
+                    
+                    weather_status = gr.Markdown("")
+                    
+                    current_temp = gr.Slider(
+                        -20, 40, step=0.1, label="Current Temperature (°C)", value=15.0
+                    )
+                    
                     predict_btn = gr.Button(
                         "🔮 Predict with All Models", variant="primary"
                     )
@@ -342,7 +376,14 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
         """
     )
 
-    # Connect button to prediction function
+    # Connect weather fetch button
+    fetch_weather_btn.click(
+        fn=fetch_weather_for_country,
+        inputs=[country_id],
+        outputs=[current_temp, weather_status],
+    )
+    
+    # Connect prediction button
     predict_btn.click(
         fn=predict_all_models,
         inputs=[last_load, current_temp, country_id],
