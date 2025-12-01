@@ -138,12 +138,6 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
             writer.writerow([
                 datetime.now().isoformat(),
                 last_load,
-                current_temp,
-                country_id,
-                raw_preds.get("XGBoost", 0),
-                raw_preds.get("LightGBM", 0),
-                raw_preds.get("CatBoost", 0)
-            ])
 import gradio as gr
 import joblib
 import numpy as np
