@@ -64,24 +64,6 @@ def engineer_time_features():
 
 # Prediction function
 def predict_all_models(last_load: float, current_temp: float, country_id: str):
-    """
-    Predicts energy load using all 3 models and returns comparison.
-    """
-    if scaler is None:
-        return "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded", "❌ Error: Scaler not loaded"
-    
-    # Encode Country ID
-    
-    # Scale features
-    try:
-        input_scaled = scaler.transform(input_features)
-    except Exception as e:
-        return f"❌ Scaling error: {e}", f"❌ Scaling error: {e}", f"❌ Scaling error: {e}"
-    
-    # Get predictions from all models
-    results = {}
-    raw_preds = {}
-    
     for name, model in loaded_models.items():
         if model is None:
             results[name] = "❌ Model not loaded"
