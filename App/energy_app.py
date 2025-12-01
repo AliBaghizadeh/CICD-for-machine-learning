@@ -153,59 +153,6 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
 def get_recent_logs():
     if not LOG_FILE.exists():
         return pd.DataFrame()
-    try:
-        df = pd.read_csv(LOG_FILE)
-        return df.tail(20).iloc[::-1]  # Show last 20, newest first
-    except:
-        return pd.DataFrame()
-
-def plot_load_forecast():
-    try:
-        df = get_recent_logs()
-        if df.empty or len(df) < 1:
-            return None
-        
-        if 'last_load' not in df.columns or 'pred_xgboost' not in df.columns:
-            return None
-        
-        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        df = df.dropna(subset=['timestamp'])
-        
-        if df.empty:
-            return None
-        
-        plot_df = df.melt(
-            id_vars=['timestamp'], 
-            value_vars=['last_load', 'pred_xgboost'],
-            var_name='Type', 
-            value_name='Load (MW)'
-        )
-        
-        plot_df['Type'] = plot_df['Type'].map({
-            'last_load': 'Actual Input', 
-            'pred_xgboost': 'XGBoost Forecast'
-        })
-        
-        plot_df = plot_df.dropna()
-        
-        if plot_df.empty:
-            return None
-        
-        return gr.LinePlot(
-            plot_df,
-            x="timestamp",
-            y="Load (MW)",
-            color="Type",
-            title="Actual Input vs Model Forecast"
-        )
-    except Exception as e:
-        print(f"Error in plot_load_forecast: {e}")
-        return None
-
-def plot_temp_dist():
-    try:
-        df = get_recent_logs()
-        if df.empty or len(df) < 1:
             return None
         
         if 'current_temp' not in df.columns:
