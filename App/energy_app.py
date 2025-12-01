@@ -174,6 +174,12 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
     return results["XGBoost"], results["LightGBM"], results["CatBoost"]
 
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Set style
+sns.set_theme(style="darkgrid")
+
 # Monitoring Dashboard Functions
 def get_recent_logs():
     if not LOG_FILE.exists():
@@ -188,29 +194,23 @@ def get_recent_logs():
 def plot_load_forecast():
     try:
         df = get_recent_logs()
-        print(f"DEBUG: Log dataframe shape: {df.shape}")
-        if not df.empty:
-            print(f"DEBUG: Columns: {df.columns.tolist()}")
-            print(f"DEBUG: Head: {df.head().to_dict()}")
-
         if df.empty or len(df) < 1:
-            print("DEBUG: DataFrame is empty")
             return None
         
         if 'pred_xgboost' not in df.columns:
-            print("DEBUG: pred_xgboost column missing")
             return None
         
         df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
         df = df.dropna(subset=['timestamp', 'pred_xgboost'])
         
         if df.empty:
-            print("DEBUG: DataFrame empty after dropna")
             return None
+            
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 6))
         
         # Only add country grouping if country_id exists
         if 'country_id' in df.columns:
-            print("DEBUG: Grouping by country")
             country_names = {
                 'AT': 'Austria', 'DE': 'Germany', 'FR': 'France', 'IT': 'Italy',
                 'BE': 'Belgium', 'CH': 'Switzerland', 'NL': 'Netherlands',
@@ -218,22 +218,18 @@ def plot_load_forecast():
             }
             df['Country'] = df['country_id'].map(country_names).fillna(df['country_id'])
             
-            return gr.LinePlot(
-                df,
-                x="timestamp",
-                y="pred_xgboost",
-                color="Country",
-                title="XGBoost Predictions by Country"
-            )
+            sns.lineplot(data=df, x='timestamp', y='pred_xgboost', hue='Country', marker='o', ax=ax)
+            ax.set_title("XGBoost Predictions by Country")
         else:
-            print("DEBUG: No country_id, plotting simple line")
-            # Fallback: no grouping
-            return gr.LinePlot(
-                df,
-                x="timestamp",
-                y="pred_xgboost",
-                title="XGBoost Predictions Over Time"
-            )
+            sns.lineplot(data=df, x='timestamp', y='pred_xgboost', marker='o', ax=ax)
+            ax.set_title("XGBoost Predictions Over Time")
+            
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Predicted Load (MW)")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        return fig
+        
     except Exception as e:
         print(f"Error in plot_load_forecast: {e}")
         return None
@@ -241,12 +237,10 @@ def plot_load_forecast():
 def plot_temp_dist():
     try:
         df = get_recent_logs()
-        # Debug prints already added in plot_load_forecast, but adding here too for completeness
         if df.empty or len(df) < 1:
             return None
         
         if 'current_temp' not in df.columns:
-            print("DEBUG: current_temp column missing")
             return None
         
         df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
@@ -254,6 +248,9 @@ def plot_temp_dist():
         
         if df.empty:
             return None
+            
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10, 6))
         
         # Only add city grouping if country_id exists
         if 'country_id' in df.columns:
@@ -264,21 +261,18 @@ def plot_temp_dist():
             }
             df['City'] = df['country_id'].map(city_names).fillna(df['country_id'])
             
-            return gr.LinePlot(
-                df,
-                x="timestamp",
-                y="current_temp",
-                color="City",
-                title="Temperature Trends by City"
-            )
+            sns.lineplot(data=df, x='timestamp', y='current_temp', hue='City', marker='o', ax=ax)
+            ax.set_title("Temperature Trends by City")
         else:
-            # Fallback: no grouping
-            return gr.LinePlot(
-                df,
-                x="timestamp",
-                y="current_temp",
-                title="Temperature Input Trend"
-            )
+            sns.lineplot(data=df, x='timestamp', y='current_temp', marker='o', ax=ax)
+            ax.set_title("Temperature Input Trend")
+            
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Temperature (°C)")
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        return fig
+        
     except Exception as e:
         print(f"Error in plot_temp_dist: {e}")
         return None
@@ -389,8 +383,8 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
             refresh_btn = gr.Button("🔄 Refresh Data")
 
             with gr.Row():
-                load_plot = gr.LinePlot(label="XGBoost Predictions")
-                temp_plot = gr.LinePlot(label="Temperature Inputs")
+                load_plot = gr.Plot(label="XGBoost Predictions")
+                temp_plot = gr.Plot(label="Temperature Inputs")
 
             gr.Markdown("### 📝 Recent Inference Logs")
             log_table = gr.DataFrame(
