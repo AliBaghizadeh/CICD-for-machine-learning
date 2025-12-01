@@ -1,17 +1,3 @@
-import gradio as gr
-import joblib
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-from pathlib import Path
-import os
-import csv
-from weather_api import fetch_current_temperature
-
-# Model paths
-MODEL_DIR = Path("./Model")
-MODELS = {
-    "XGBoost": MODEL_DIR / "xgboost_model.pkl",
     "LightGBM": MODEL_DIR / "lightgbm_model.pkl",
     "CatBoost": MODEL_DIR / "catboost_model.pkl",
 }
