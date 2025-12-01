@@ -1,92 +1,257 @@
-# ⚡ End-to-End Energy Load Forecasting Pipeline (Professional MLOps)
+# ⚡ European Energy Load Forecasting - Multi-Model MLOps Pipeline
+
+[![CI/CD](https://github.com/AliBaghizadeh/CICD-for-machine-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/AliBaghizadeh/CICD-for-machine-learning/actions)
+[![HuggingFace Space](https://img.shields.io/badge/🤗%20HuggingFace-Space-yellow)](https://huggingface.co/spaces/alibaghizade/time_series_energy)
 
 ## 🎯 Overview
 
-This project implements a professional, end-to-end MLOps pipeline for energy load forecasting using modern tools and practices. The system provides highly accurate hourly energy demand predictions by leveraging advanced feature engineering, powerful XGBoost models, and robust MLflow-based lifecycle management.
+A production-ready MLOps pipeline for forecasting hourly energy consumption across **10 European countries** using **3 optimized gradient boosting models**. This project demonstrates end-to-end machine learning lifecycle management with automated CI/CD, experiment tracking, and model registry.
 
-The core solution focuses on solving a challenging time-series regression problem. The pipeline is designed for high reliability, using a dedicated feature engineering layer, automated Hyperparameter Optimization (HPO), and strict model versioning to ensure that only verified models are promoted to the deployment environment.
+### 🌟 Key Features
 
-The workflow follows a standard MLOps pattern: code changes trigger the CI pipeline to run training and evaluation, and upon success, the CD pipeline handles the deployment of the validated model.
+- **Multi-Model Comparison**: XGBoost, LightGBM, and CatBoost trained and optimized independently
+- **GPU-Accelerated Training**: Hyperparameter optimization using Optuna on NVIDIA RTX 5080
+- **MLflow Integration**: Complete experiment tracking and model registry
+- **Automated CI/CD**: GitHub Actions pipeline with continuous deployment to HuggingFace
+- **Interactive Demo**: Gradio web app comparing predictions from all 3 models
 
-## 🧠 Model and Feature Engineering
+### 📊 Model Performance
 
-The primary model used is an **XGBoost Regressor**, chosen for its speed, performance, and robustness with structured data and complex feature interactions. Model training is handled by `train.py`, which is responsible for invoking the HPO process to find the optimal combination of parameters (e.g., learning rate, max depth). All HPO trials and the final model configuration are meticulously logged to MLflow.
+| Model | MAE (MW) | Status | GPU Acceleration |
+|-------|----------|--------|------------------|
+| **XGBoost** | 92.81 | 🥇 Best | CUDA |
+| **LightGBM** | 93.42 | 🥈 | CPU (Windows compatible) |
+| **CatBoost** | 124.74 | 🥉 | GPU |
 
-Crucial to the model's performance is the quality of the input data. This is managed by the external Python package, `src/features.py`. This module encapsulates all logic for creating sophisticated time-series features, including cyclical encoding (sin/cos transformations of the hour and day-of-year), holiday flags, and the integration and alignment of external weather data (e.g., temperature and humidity). Separating this logic ensures that the features used during model training are identical to those used during live inference in the deployed application.
+*All models optimized with 50 Optuna trials on 800K+ rows of European energy data*
 
-The project uses two dedicated files for data management and exploration. The `Data/data_import.py` script is responsible for the critical first step: reliably downloading and setting up the initial Parquet file (`Data/train-00000-of-00001.parquet`) from an external source, ensuring data provenance. Furthermore, the `Results/notebook.ipynb` file contains the initial exploratory data analysis (EDA) and prototyping work, serving as a transparent record of the feature engineering decisions and data understanding that informed the final `train.py` script.
+## 🚀 Live Demo
 
-## ⚙️ CI/CD and Model Management
+Try the deployed application: **[European Energy Forecasting App](https://huggingface.co/spaces/alibaghizade/time_series_energy)**
 
-The CI/CD pipeline, orchestrated by GitHub Actions workflows (`.github/workflows/`), provides full automation and quality gates. The `ci.yml` workflow first executes the training and evaluation steps, including running a Performance Baseline (a simple statistical model) to ensure the advanced XGBoost model provides a significant performance lift. All metrics and artifacts from this run are logged to MLflow Experiment Tracking. The evaluation step relies heavily on CML (Continuous Machine Learning) to post performance reports (from `Results/metrics.txt` and `model_results.png`) directly to GitHub pull requests, enabling governance-approved model promotion.
+The app provides:
+- Side-by-side predictions from all 3 models
+- Real-time energy load forecasting for 10 European countries
+- Performance metrics comparison
+- Interactive parameter adjustment
 
-Upon successful completion of the CI job, the deployment workflow (`cd.yml`) triggers. This job authenticates with MLflow Model Registry, retrieves the latest, approved model version, and deploys the entire application stack—including the Gradio app code (`App/energy_app.py`) and required dependencies—to the Hugging Face Space. This practice ensures that the deployed service always uses the highest-quality, governance-approved model artifact.
+## 🧠 Technical Architecture
 
-## ✨ Core MLOps & ML Features
+### Machine Learning Pipeline
 
-| Category | Feature | Description |
-|----------|---------|-------------|
-| **Model Lifecycle** | MLflow Integration | All runs, metrics (MAE, R²), and artifacts are logged and versioned in MLflow Tracking and Model Registry. |
-| **Data & Features** | Advanced Feature Engineering | Features are generated via a versioned Python package (`src/`) and include: external weather data, cyclical time encoding, and holiday indicators. |
-| **Monitoring** | Data Drift Detection | The deployed application logs inputs/outputs for external monitoring services, preparing the app for Continuous Model Monitoring. |
-| **Quality Control** | Performance Baselines | CI automatically runs and logs a simple statistical baseline model for comparison. |
-| **Model Packaging** | Skops Serialization | The trained pipeline is saved using skops for secure and robust deployment. |
-
-## 🗂️ Automation and Makefile Targets
-
-The entire ML lifecycle is streamlined using the Makefile. This ensures consistency between local development and the automated CI/CD environment. By executing simple, descriptive targets, developers can manage the pipeline without needing to know specific Python commands.
-
-| Target | Purpose | Description |
-|--------|---------|-------------|
-| `make install` | Environment Setup | Installs all required dependencies from `requirements.txt`. |
-| `make train` | Training & Artifact Generation | Executes `train.py`, which handles data prep, feature engineering, model training, and saves the final model (`.skops`), metrics, and plot. |
-| `make eval` | Quality Reporting (CML) | Generates the `report.md` from the `Results/` artifacts and uses CML to post the performance report as a comment in the GitHub PR. |
-| `make deploy` | Continuous Deployment | Runs the necessary Hugging Face CLI login and then executes the push command to deploy the model and Gradio app to the target Space. |
-| `make format` | Code Quality | Applies the black code formatter to enforce consistent style across the project. |
-
-## 📦 Project Structure
-
-The repository is structured for clear separation of ML stages:
+```mermaid
+graph LR
+    A[Raw Data] --> B[Feature Engineering]
+    B --> C[Train/Test Split]
+    C --> D1[XGBoost HPO]
+    C --> D2[LightGBM HPO]
+    C --> D3[CatBoost HPO]
+    D1 --> E[MLflow Registry]
+    D2 --> E
+    D3 --> E
+    E --> F[Deployment]
+    F --> G[Gradio App]
 ```
-├── .github/
-│   └── workflows/
-│       ├── ci.yml              # CI: Training, Evaluation, Baseline, MLflow Logging.
-│       └── cd.yml              # CD: Fetches model from MLflow Registry, deploys to Hugging Face Space.
-├── src/                        # Placeholder for reusable ML logic
-│   └── features.py             # Feature engineering logic (time/weather features).
+
+### Feature Engineering
+
+Advanced time-series features including:
+- **Cyclical encoding**: Hour, day of week, month (sin/cos transformations)
+- **Lagged features**: 15min, 1hr, 1day, 1week lags
+- **Weather data**: Temperature, solar radiation
+- **Calendar features**: Holidays, weekends
+- **Country encoding**: One-hot encoding for 10 European countries
+
+### Hyperparameter Optimization
+
+Each model was independently optimized using **Optuna** with:
+- 50 trials per model (150 total trials)
+- Time-series cross-validation (3 splits)
+- GPU acceleration where available
+- Bayesian optimization for efficient search
+
+## 📁 Project Structure
+
+```
+├── .github/workflows/
+│   ├── ci.yml                    # Continuous Integration
+│   └── cd.yml                    # Continuous Deployment
 ├── App/
-│   └── energy_app.py           # Gradio application code for deployment.
-├── Model/
-│   └── energy_forecast_pipeline.skops # Saved trained scikit-learn pipeline (via skops).
+│   └── energy_app.py             # Gradio multi-model comparison app
 ├── Data/
-│   ├── data_import.py          # Script to download and verify the raw Parquet data.
-│   └── train-00000-of-00001.parquet # Raw input energy data file.
+│   └── train-00000-of-00001.parquet  # European energy dataset
+├── Model/                        # Trained models (gitignored, too large)
+│   ├── xgboost_model.pkl
+│   ├── lightgbm_model.pkl
+│   ├── catboost_model.pkl
+│   ├── scaler.pkl
+│   └── best_params.txt
 ├── Results/
-│   ├── metrics.txt             # Final performance metrics (MAE, R2) for CML report.
-│   └── notebook.ipynb          # Jupyter Notebook for exploratory data analysis (EDA).
-├── train.py                    # Main script: Data Prep, Training, Evaluation, and Model Saving.
-├── Makefile                    # Automation targets for local and CI/CD execution.
-└── requirements.txt            # Python dependencies (incl. pandas, xgboost, skops, mlflow).
+│   ├── metrics.txt               # Performance metrics
+│   ├── model_results.png         # Visualization
+│   └── notebook.ipynb            # EDA and prototyping
+├── train.py                      # Single model training (CI/CD)
+├── train_hpo.py                  # Multi-model HPO script
+├── register_models.py            # MLflow model registration
+├── check_gpu.py                  # GPU verification utility
+├── Makefile                      # Automation commands
+└── requirements.txt              # Python dependencies
 ```
 
 ## 💻 Getting Started
 
+### Prerequisites
+
+- Python 3.10+
+- CUDA-capable GPU (optional, for faster training)
+- Git
+
 ### Installation
 
-Clone the repository and install the dependencies:
 ```bash
-git clone <your-repo-url>
-cd <project-name>
+# Clone the repository
+git clone https://github.com/AliBaghizadeh/CICD-for-machine-learning.git
+cd CICD-for-machine-learning
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Local Execution
+### Local Development
 
-To run the full training pipeline and launch the MLflow UI locally:
+#### 1. Train a Single Model (Quick)
 ```bash
-# Run training, logging results to MLflow
 python train.py
+```
 
-# Launch the MLflow UI to inspect runs and register the best model
+#### 2. Run Hyperparameter Optimization (All 3 Models)
+```bash
+python train_hpo.py
+```
+*Note: This will take 10-20 minutes with GPU acceleration*
+
+#### 3. Register Models in MLflow
+```bash
+python register_models.py
+```
+
+#### 4. Launch MLflow UI
+```bash
 mlflow ui
 ```
+Open `http://localhost:5000` to view experiments and models
+
+#### 5. Test the Gradio App Locally
+```bash
+python App/energy_app.py
+```
+Open `http://localhost:7860` to interact with the app
+
+### Using Makefile
+
+```bash
+make install        # Install dependencies
+make train          # Train single model
+make hpo            # Run hyperparameter optimization
+make register-models # Register models in MLflow
+make mlflow-ui      # Launch MLflow UI
+```
+
+## 🔄 CI/CD Pipeline
+
+### Continuous Integration (CI)
+
+Triggered on every push to `main`:
+1. ✅ Code checkout
+2. ✅ Environment setup
+3. ✅ Dependency installation
+4. ✅ Model training
+5. ✅ Performance evaluation
+6. ✅ Results reporting (CML)
+
+### Continuous Deployment (CD)
+
+Triggered after successful CI:
+1. ✅ Checkout `update` branch
+2. ✅ Install dependencies
+3. ✅ Deploy to HuggingFace Space
+   - App code (`energy_app.py`)
+   - Requirements
+   - Model files
+   - Metrics
+
+## 📊 MLflow Integration
+
+### Experiment Tracking
+
+All training runs are logged to MLflow with:
+- Hyperparameters (learning rate, max depth, etc.)
+- Metrics (MAE, R²)
+- Artifacts (plots, model files)
+- System info (GPU, CPU, memory)
+
+### Model Registry
+
+Models are versioned and tagged:
+- **Production**: Best performing model
+- **Staging**: Models under evaluation
+- **Archived**: Previous versions
+
+Access the registry:
+```bash
+mlflow ui
+# Navigate to "Models" tab
+```
+
+## 🛠️ Technologies Used
+
+| Category | Tools |
+|----------|-------|
+| **ML Frameworks** | XGBoost, LightGBM, CatBoost, scikit-learn |
+| **Optimization** | Optuna |
+| **Experiment Tracking** | MLflow |
+| **Web Framework** | Gradio |
+| **CI/CD** | GitHub Actions, CML |
+| **Deployment** | HuggingFace Spaces |
+| **Data Processing** | Pandas, NumPy |
+| **Visualization** | Matplotlib, Seaborn |
+
+## 📈 Dataset
+
+**Source**: European energy consumption data (800K+ rows)
+
+**Features**:
+- Timestamp (hourly resolution)
+- Energy load (MW)
+- Temperature (°C)
+- Solar radiation
+- Country ID (AT, DE, FR, IT, BE, CH, NL, PL, CZ, ES)
+
+## 🎯 Future Improvements
+
+- [ ] Implement continuous model monitoring
+- [ ] Add SHAP explainability
+- [ ] Integrate external weather APIs
+- [ ] Deploy to cloud (AWS/Azure/GCP)
+- [ ] Add model ensemble predictions
+- [ ] Implement A/B testing framework
+
+## 📝 License
+
+This project is licensed under the MIT License.
+
+## 👤 Author
+
+**Ali Baghizadeh**
+- GitHub: [@AliBaghizadeh](https://github.com/AliBaghizadeh)
+- HuggingFace: [@alibaghizade](https://huggingface.co/alibaghizade)
+
+## 🙏 Acknowledgments
+
+- European energy dataset providers
+- MLflow and Optuna communities
+- HuggingFace for free hosting
+
+---
+
+⭐ **Star this repo** if you find it useful!
