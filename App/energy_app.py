@@ -44,62 +44,6 @@ for name, path in MODELS.items():
         loaded_models[name] = None
 
 try:
-    scaler = joblib.load(SCALER_PATH)
-    print("✅ Scaler loaded")
-except Exception as e:
-    print(f"❌ Failed to load scaler: {e}")
-    scaler = None
-
-# Feature engineering function
-def engineer_time_features():
-    """Calculates time features for the next hour (t+1)."""
-    target_time = datetime.now() + timedelta(hours=1)
-    
-    hour = target_time.hour
-    day_of_week = target_time.weekday()
-    month = target_time.month
-    is_weekend = 1 if day_of_week >= 5 else 0
-    
-    return [hour, day_of_week, month, is_weekend]
-
-# Prediction function
-def predict_all_models(last_load: float, current_temp: float, country_id: str):
-    for name, model in loaded_models.items():
-        if model is None:
-            results[name] = "❌ Model not loaded"
-            raw_preds[name] = 0.0
-        else:
-            try:
-                prediction = model.predict(input_scaled)[0]
-                mae = MODEL_PERFORMANCE[name]
-                results[name] = f"**{prediction:,.2f} MW**\n\n📊 Model MAE: {mae:.2f} MW"
-                raw_preds[name] = float(prediction)
-            except Exception as e:
-                results[name] = f"❌ Prediction error: {e}"
-                raw_preds[name] = 0.0
-    
-    # Log request
-    try:
-        with open(LOG_FILE, "a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow([
-                datetime.now().isoformat(),
-                last_load,
-                current_temp,
-                country_id,
-                raw_preds.get("XGBoost", 0),
-                raw_preds.get("LightGBM", 0),
-                raw_preds.get("CatBoost", 0)
-            ])
-    except Exception as e:
-        print(f"Logging failed: {e}")
-    
-    return results["XGBoost"], results["LightGBM"], results["CatBoost"]
-
-# Monitoring Dashboard Functions
-def get_recent_logs():
-    if not LOG_FILE.exists():
-        return pd.DataFrame()
     try:
         df = pd.read_csv(LOG_FILE)
         return df.tail(20).iloc[::-1]  # Show last 20, newest first
