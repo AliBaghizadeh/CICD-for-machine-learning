@@ -4,9 +4,10 @@ import time
 import os
 import sys
 
+
 def configure_server():
     print("🚀 Starting Server Configuration...")
-    
+
     # Load config
     try:
         with open("aws_config.json", "r") as f:
@@ -18,14 +19,14 @@ def configure_server():
     host = config["ec2_public_ip"]
     key_file = f"{config['key_pair_name']}.pem"
     bucket = config["bucket_name"]
-    
+
     print(f"Connecting to {host} using {key_file}...")
-    
+
     # Wait for SSH to be ready (instance might still be booting)
     retries = 5
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
+
     for i in range(retries):
         try:
             ssh.connect(hostname=host, username="ubuntu", key_filename=key_file)
@@ -68,14 +69,14 @@ EOF
         "sudo systemctl daemon-reload",
         "sudo systemctl enable mlflow",
         "sudo systemctl start mlflow",
-        "sudo systemctl status mlflow --no-pager"
+        "sudo systemctl status mlflow --no-pager",
     ]
 
     for cmd in commands:
         print(f"\nRunning: {cmd.splitlines()[0]}...")
         stdin, stdout, stderr = ssh.exec_command(cmd)
         exit_status = stdout.channel.recv_exit_status()
-        
+
         if exit_status == 0:
             print("✅ Success")
         else:
@@ -86,6 +87,7 @@ EOF
 
     print(f"\n🎉 MLflow Server is running at: http://{host}:5000")
     ssh.close()
+
 
 if __name__ == "__main__":
     configure_server()

@@ -8,11 +8,13 @@ import numpy as np
 # Apply the same Host header patch
 original_request = requests.Session.request
 
+
 def patched_request(self, method, url, **kwargs):
-    if 'headers' not in kwargs:
-        kwargs['headers'] = {}
-    kwargs['headers']['Host'] = '127.0.0.1:5001'
+    if "headers" not in kwargs:
+        kwargs["headers"] = {}
+    kwargs["headers"]["Host"] = "127.0.0.1:5001"
     return original_request(self, method, url, **kwargs)
+
 
 requests.Session.request = patched_request
 
@@ -28,7 +30,7 @@ try:
     y = np.random.rand(100)
     model = RandomForestRegressor(n_estimators=10, random_state=42)
     model.fit(X, y)
-    
+
     # Try to log it
     mlflow.set_experiment("Test_Logging")
     with mlflow.start_run(run_name="Test_Model"):
@@ -37,8 +39,9 @@ try:
         mlflow.sklearn.log_model(model, "model")
         print("✅ Successfully logged test model to MLflow!")
         print(f"🔗 Check: http://18.153.53.234:5000/#/experiments")
-        
+
 except Exception as e:
     print(f"❌ Failed to log model: {e}")
     import traceback
+
     traceback.print_exc()

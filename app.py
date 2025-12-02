@@ -73,7 +73,9 @@ def engineer_time_features():
 
 # Prediction function
 def predict_all_models(last_load: float, current_temp: float, country_id: str):
-    print(f"Received request: Load={last_load}, Temp={current_temp}, Country={country_id}")
+    print(
+        f"Received request: Load={last_load}, Temp={current_temp}, Country={country_id}"
+    )
 
     if scaler is None:
         return (
@@ -146,7 +148,9 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
             try:
                 prediction = model.predict(input_scaled)[0]
                 mae = MODEL_PERFORMANCE[name]
-                results[name] = f"**{prediction:,.2f} MW**\n\n📊 Model MAE: {mae:.2f} MW"
+                results[name] = (
+                    f"**{prediction:,.2f} MW**\n\n📊 Model MAE: {mae:.2f} MW"
+                )
                 raw_preds[name] = float(prediction)
             except Exception as e:
                 print(f"{name} error: {e}")
@@ -180,6 +184,7 @@ import seaborn as sns
 # Set style
 sns.set_theme(style="darkgrid")
 
+
 # Monitoring Dashboard Functions
 def get_recent_logs():
     if not LOG_FILE.exists():
@@ -196,83 +201,107 @@ def plot_load_forecast():
         df = get_recent_logs()
         if df.empty or len(df) < 1:
             return None
-        
-        if 'pred_xgboost' not in df.columns:
+
+        if "pred_xgboost" not in df.columns:
             return None
-        
-        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        df = df.dropna(subset=['timestamp', 'pred_xgboost'])
-        
+
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        df = df.dropna(subset=["timestamp", "pred_xgboost"])
+
         if df.empty:
             return None
-            
+
         # Create figure
         fig, ax = plt.subplots(figsize=(10, 6))
-        
+
         # Only add country grouping if country_id exists
-        if 'country_id' in df.columns:
+        if "country_id" in df.columns:
             country_names = {
-                'AT': 'Austria', 'DE': 'Germany', 'FR': 'France', 'IT': 'Italy',
-                'BE': 'Belgium', 'CH': 'Switzerland', 'NL': 'Netherlands',
-                'PL': 'Poland', 'CZ': 'Czech Republic', 'ES': 'Spain'
+                "AT": "Austria",
+                "DE": "Germany",
+                "FR": "France",
+                "IT": "Italy",
+                "BE": "Belgium",
+                "CH": "Switzerland",
+                "NL": "Netherlands",
+                "PL": "Poland",
+                "CZ": "Czech Republic",
+                "ES": "Spain",
             }
-            df['Country'] = df['country_id'].map(country_names).fillna(df['country_id'])
-            
-            sns.lineplot(data=df, x='timestamp', y='pred_xgboost', hue='Country', marker='o', ax=ax)
+            df["Country"] = df["country_id"].map(country_names).fillna(df["country_id"])
+
+            sns.lineplot(
+                data=df,
+                x="timestamp",
+                y="pred_xgboost",
+                hue="Country",
+                marker="o",
+                ax=ax,
+            )
             ax.set_title("XGBoost Predictions by Country")
         else:
-            sns.lineplot(data=df, x='timestamp', y='pred_xgboost', marker='o', ax=ax)
+            sns.lineplot(data=df, x="timestamp", y="pred_xgboost", marker="o", ax=ax)
             ax.set_title("XGBoost Predictions Over Time")
-            
+
         ax.set_xlabel("Time")
         ax.set_ylabel("Predicted Load (MW)")
         plt.xticks(rotation=45)
         plt.tight_layout()
         return fig
-        
+
     except Exception as e:
         print(f"Error in plot_load_forecast: {e}")
         return None
+
 
 def plot_temp_dist():
     try:
         df = get_recent_logs()
         if df.empty or len(df) < 1:
             return None
-        
-        if 'current_temp' not in df.columns:
+
+        if "current_temp" not in df.columns:
             return None
-        
-        df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
-        df = df.dropna(subset=['timestamp', 'current_temp'])
-        
+
+        df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+        df = df.dropna(subset=["timestamp", "current_temp"])
+
         if df.empty:
             return None
-            
+
         # Create figure
         fig, ax = plt.subplots(figsize=(10, 6))
-        
+
         # Only add city grouping if country_id exists
-        if 'country_id' in df.columns:
+        if "country_id" in df.columns:
             city_names = {
-                'AT': 'Vienna', 'DE': 'Berlin', 'FR': 'Paris', 'IT': 'Rome',
-                'BE': 'Brussels', 'CH': 'Zurich', 'NL': 'Amsterdam',
-                'PL': 'Warsaw', 'CZ': 'Prague', 'ES': 'Madrid'
+                "AT": "Vienna",
+                "DE": "Berlin",
+                "FR": "Paris",
+                "IT": "Rome",
+                "BE": "Brussels",
+                "CH": "Zurich",
+                "NL": "Amsterdam",
+                "PL": "Warsaw",
+                "CZ": "Prague",
+                "ES": "Madrid",
             }
-            df['City'] = df['country_id'].map(city_names).fillna(df['country_id'])
-            
-            sns.lineplot(data=df, x='timestamp', y='current_temp', hue='City', marker='o', ax=ax)
+            df["City"] = df["country_id"].map(city_names).fillna(df["country_id"])
+
+            sns.lineplot(
+                data=df, x="timestamp", y="current_temp", hue="City", marker="o", ax=ax
+            )
             ax.set_title("Temperature Trends by City")
         else:
-            sns.lineplot(data=df, x='timestamp', y='current_temp', marker='o', ax=ax)
+            sns.lineplot(data=df, x="timestamp", y="current_temp", marker="o", ax=ax)
             ax.set_title("Temperature Input Trend")
-            
+
         ax.set_xlabel("Time")
         ax.set_ylabel("Temperature (°C)")
         plt.xticks(rotation=45)
         plt.tight_layout()
         return fig
-        
+
     except Exception as e:
         print(f"Error in plot_temp_dist: {e}")
         return None
@@ -282,24 +311,24 @@ def plot_temp_dist():
 def fetch_weather_for_country(country_id: str):
     """
     Fetch current weather for a country and return temperature + status message.
-    
+
     Returns:
         tuple: (temperature: float, status_message: str)
     """
     weather_data = fetch_current_temperature(country_id)
-    
+
     if weather_data is None:
         return (
             15.0,  # Default fallback temperature
             "⚠️ Could not fetch weather data. Using default temperature.",
         )
-    
+
     temp = weather_data["temperature"]
     city = weather_data["city"]
     description = weather_data["description"]
-    
+
     status_msg = f"✅ Fetched from {city}: {temp}°C ({description})"
-    
+
     return temp, status_msg
 
 
@@ -322,22 +351,24 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
                     last_load = gr.Slider(
                         0, 10000, step=1, label="Last Known Load (MW)", value=5000
                     )
-                    
+
                     country_id = gr.Radio(
                         ["AT", "DE", "FR", "IT", "BE", "CH", "NL", "PL", "CZ", "ES"],
                         label="Country ID",
                         value="DE",
                     )
-                    
+
                     with gr.Row():
-                        fetch_weather_btn = gr.Button("🌤️ Fetch Current Weather", size="sm")
-                    
+                        fetch_weather_btn = gr.Button(
+                            "🌤️ Fetch Current Weather", size="sm"
+                        )
+
                     weather_status = gr.Markdown("")
-                    
+
                     current_temp = gr.Slider(
                         -20, 40, step=0.1, label="Current Temperature (°C)", value=15.0
                     )
-                    
+
                     predict_btn = gr.Button(
                         "🔮 Predict with All Models", variant="primary"
                     )
@@ -401,17 +432,11 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
             def refresh_all():
                 """Refresh all monitoring components"""
                 return plot_load_forecast(), plot_temp_dist(), get_recent_logs()
-            
-            refresh_btn.click(
-                fn=refresh_all,
-                outputs=[load_plot, temp_plot, log_table]
-            )
-            
+
+            refresh_btn.click(fn=refresh_all, outputs=[load_plot, temp_plot, log_table])
+
             # Auto-load on tab select
-            demo.load(
-                fn=refresh_all,
-                outputs=[load_plot, temp_plot, log_table]
-            )
+            demo.load(fn=refresh_all, outputs=[load_plot, temp_plot, log_table])
 
     gr.Markdown(
         """
@@ -435,7 +460,7 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
         inputs=[country_id],
         outputs=[current_temp, weather_status],
     )
-    
+
     # Connect prediction button
     predict_btn.click(
         fn=predict_all_models,

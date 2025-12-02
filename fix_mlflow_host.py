@@ -2,9 +2,10 @@ import paramiko
 import json
 import sys
 
+
 def fix_mlflow_host():
     print("🔧 Fixing MLflow server configuration...")
-    
+
     # Load config
     try:
         with open("aws_config.json", "r") as f:
@@ -16,12 +17,12 @@ def fix_mlflow_host():
     host = config["ec2_public_ip"]
     key_file = f"{config['key_pair_name']}.pem"
     bucket = config["bucket_name"]
-    
+
     print(f"Connecting to {host}...")
-    
+
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    
+
     try:
         ssh.connect(hostname=host, username="ubuntu", key_filename=key_file)
         print("✅ Connected!")
@@ -52,20 +53,20 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 """
-    
+
     commands = [
         update_service_cmd,
         "sudo systemctl daemon-reload",
         "sudo systemctl restart mlflow",
         "sleep 3",
-        "sudo systemctl status mlflow --no-pager"
+        "sudo systemctl status mlflow --no-pager",
     ]
 
     for cmd in commands:
         print(f"\nRunning: {cmd.splitlines()[0][:50]}...")
         stdin, stdout, stderr = ssh.exec_command(cmd)
         exit_status = stdout.channel.recv_exit_status()
-        
+
         if exit_status == 0:
             print("✅ Success")
         else:
@@ -76,6 +77,7 @@ EOF
     print(f"\n🎉 MLflow server reconfigured!")
     print(f"Try the connection test again: python test_mlflow_connection.py")
     ssh.close()
+
 
 if __name__ == "__main__":
     fix_mlflow_host()

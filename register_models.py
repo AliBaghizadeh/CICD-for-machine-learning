@@ -2,6 +2,7 @@
 Register optimized models in MLflow Model Registry
 This script loads the trained models and registers them in MLflow for version control
 """
+
 import mlflow
 import mlflow.sklearn
 import mlflow.xgboost
@@ -28,108 +29,105 @@ scaler = joblib.load(MODEL_DIR / "scaler.pkl")
 mae_values = {}
 with open(MODEL_DIR / "best_params.txt", "r") as f:
     content = f.read()
-    
+
     # Parse each model section
-    sections = content.split('------------------------------------------------------------')
+    sections = content.split(
+        "------------------------------------------------------------"
+    )
     for section in sections:
-        if 'XGBOOST:' in section:
-            for line in section.split('\n'):
-                if 'MAE:' in line:
-                    mae_values['xgboost'] = float(line.split('MAE:')[1].strip())
-        elif 'LIGHTGBM:' in section:
-            for line in section.split('\n'):
-                if 'MAE:' in line:
-                    mae_values['lightgbm'] = float(line.split('MAE:')[1].strip())
-        elif 'CATBOOST:' in section:
-            for line in section.split('\n'):
-                if 'MAE:' in line:
-                    mae_values['catboost'] = float(line.split('MAE:')[1].strip())
+        if "XGBOOST:" in section:
+            for line in section.split("\n"):
+                if "MAE:" in line:
+                    mae_values["xgboost"] = float(line.split("MAE:")[1].strip())
+        elif "LIGHTGBM:" in section:
+            for line in section.split("\n"):
+                if "MAE:" in line:
+                    mae_values["lightgbm"] = float(line.split("MAE:")[1].strip())
+        elif "CATBOOST:" in section:
+            for line in section.split("\n"):
+                if "MAE:" in line:
+                    mae_values["catboost"] = float(line.split("MAE:")[1].strip())
 
 print(f"MAE values: {mae_values}")
 
 # ============================================================================
 # Register XGBoost Model
 # ============================================================================
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Registering XGBoost model...")
-print("="*60)
+print("=" * 60)
 
 mlflow.set_experiment("XGBoost_Production")
 with mlflow.start_run(run_name="xgboost_optimized") as run:
     # Log metrics
-    mlflow.log_metric("mae", mae_values.get('xgboost', 0))
-    mlflow.log_metric("mae_cv", mae_values.get('xgboost', 0))
-    
+    mlflow.log_metric("mae", mae_values.get("xgboost", 0))
+    mlflow.log_metric("mae_cv", mae_values.get("xgboost", 0))
+
     # Log model
     mlflow.xgboost.log_model(
-        xgb_model,
-        artifact_path="model",
-        registered_model_name="energy-xgboost"
+        xgb_model, artifact_path="model", registered_model_name="energy-xgboost"
     )
-    
+
     # Log scaler as artifact
     mlflow.log_artifact(str(MODEL_DIR / "scaler.pkl"))
-    
+
     print(f"✅ XGBoost registered with MAE: {mae_values.get('xgboost', 0):.2f}")
 
 # ============================================================================
 # Register LightGBM Model
 # ============================================================================
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Registering LightGBM model...")
-print("="*60)
+print("=" * 60)
 
 mlflow.set_experiment("LightGBM_Production")
 with mlflow.start_run(run_name="lightgbm_optimized") as run:
     # Log metrics
-    mlflow.log_metric("mae", mae_values.get('lightgbm', 0))
-    mlflow.log_metric("mae_cv", mae_values.get('lightgbm', 0))
-    
+    mlflow.log_metric("mae", mae_values.get("lightgbm", 0))
+    mlflow.log_metric("mae_cv", mae_values.get("lightgbm", 0))
+
     # Log model
     mlflow.lightgbm.log_model(
-        lgb_model,
-        artifact_path="model",
-        registered_model_name="energy-lightgbm"
+        lgb_model, artifact_path="model", registered_model_name="energy-lightgbm"
     )
-    
+
     # Log scaler as artifact
     mlflow.log_artifact(str(MODEL_DIR / "scaler.pkl"))
-    
+
     print(f"✅ LightGBM registered with MAE: {mae_values.get('lightgbm', 0):.2f}")
 
 # ============================================================================
 # Register CatBoost Model
 # ============================================================================
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Registering CatBoost model...")
-print("="*60)
+print("=" * 60)
 
 mlflow.set_experiment("CatBoost_Production")
 with mlflow.start_run(run_name="catboost_optimized") as run:
     # Log metrics
-    mlflow.log_metric("mae", mae_values.get('catboost', 0))
-    mlflow.log_metric("mae_cv", mae_values.get('catboost', 0))
-    
+    mlflow.log_metric("mae", mae_values.get("catboost", 0))
+    mlflow.log_metric("mae_cv", mae_values.get("catboost", 0))
+
     # Log model
     mlflow.catboost.log_model(
-        cat_model,
-        artifact_path="model",
-        registered_model_name="energy-catboost"
+        cat_model, artifact_path="model", registered_model_name="energy-catboost"
     )
-    
+
     # Log scaler as artifact
     mlflow.log_artifact(str(MODEL_DIR / "scaler.pkl"))
-    
+
     print(f"✅ CatBoost registered with MAE: {mae_values.get('catboost', 0):.2f}")
 
 # ============================================================================
 # Set Production Aliases (for best model)
 # ============================================================================
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Setting production aliases...")
-print("="*60)
+print("=" * 60)
 
 from mlflow import MlflowClient
+
 client = MlflowClient()
 
 # Get latest versions
@@ -144,9 +142,9 @@ for model_name in ["energy-xgboost", "energy-lightgbm", "energy-catboost"]:
     except Exception as e:
         print(f"⚠️  Could not set alias for {model_name}: {e}")
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("✅ All models registered successfully!")
-print("="*60)
+print("=" * 60)
 print("\nTo view registered models:")
 print("  mlflow ui")
 print("  Then navigate to 'Models' tab")
