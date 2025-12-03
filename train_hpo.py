@@ -63,7 +63,7 @@ print(f"Dataset: {len(X_scaled)} rows, {len(X_scaled.columns)} features")
 # ============================================================================
 def optimize_xgboost(trial):
     params = {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 300),
+        "n_estimators": trial.suggest_int("n_estimators", 200, 2000),
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.3, log=True),
         "max_depth": trial.suggest_int("max_depth", 3, 12),
         "subsample": trial.suggest_float("subsample", 0.6, 1.0),
@@ -97,7 +97,7 @@ def optimize_xgboost(trial):
 # ============================================================================
 def optimize_lightgbm(trial):
     params = {
-        "n_estimators": trial.suggest_int("n_estimators", 200, 300),
+        "n_estimators": trial.suggest_int("n_estimators", 200, 2000),
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.3, log=True),
         "max_depth": trial.suggest_int("max_depth", 3, 12),
         "num_leaves": trial.suggest_int("num_leaves", 20, 150),
@@ -132,7 +132,7 @@ def optimize_lightgbm(trial):
 # ============================================================================
 def optimize_catboost(trial):
     params = {
-        "iterations": trial.suggest_int("iterations", 200, 300),
+        "iterations": trial.suggest_int("iterations", 200, 2000),
         "learning_rate": trial.suggest_float("learning_rate", 0.005, 0.3, log=True),
         "depth": trial.suggest_int("depth", 3, 10),
         "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-3, 10.0, log=True),
@@ -208,7 +208,7 @@ def log_model_to_mlflow(experiment_name, run_name, model, params, mae_score, inp
 # Main Execution
 # ============================================================================
 if __name__ == "__main__":
-    N_TRIALS = 1  # Increase for more thorough search
+    N_TRIALS = 20  # Increase for more thorough search
 
     results = {}
 
