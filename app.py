@@ -11,7 +11,7 @@ from weather_api import fetch_current_temperature
 # Model paths
 MODEL_DIR = Path("./Model")
 MODELS = {
-    "XGBoost": MODEL_DIR / "xgboost_model.pkl",
+    "XGBoost": MODEL_DIR / "xgboost_model.json",
     "LightGBM": MODEL_DIR / "lightgbm_model.pkl",
     "CatBoost": MODEL_DIR / "catboost_model.pkl",
 }
@@ -44,7 +44,14 @@ print("Loading models...")
 loaded_models = {}
 for name, path in MODELS.items():
     try:
-        loaded_models[name] = joblib.load(path)
+        if name == "XGBoost":
+            # Load XGBoost from native format
+            from xgboost import XGBRegressor
+            model = XGBRegressor()
+            model.load_model(path)
+            loaded_models[name] = model
+        else:
+            loaded_models[name] = joblib.load(path)
         print(f"✅ {name} loaded")
     except Exception as e:
         print(f"❌ Failed to load {name}: {e}")

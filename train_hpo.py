@@ -339,7 +339,8 @@ if __name__ == "__main__":
     MODEL_DIR.mkdir(exist_ok=True)
 
     # Save models
-    joblib.dump(final_xgb, MODEL_DIR / "xgboost_model.pkl")
+    # XGBoost: Use native format for better compatibility
+    final_xgb.save_model(MODEL_DIR / "xgboost_model.json")
     joblib.dump(final_lgb, MODEL_DIR / "lightgbm_model.pkl")
     joblib.dump(final_cat, MODEL_DIR / "catboost_model.pkl")
     joblib.dump(scaler, MODEL_DIR / "scaler.pkl")
