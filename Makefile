@@ -30,7 +30,7 @@ eval:
 
 # format: For code quality
 format:
-	black .
+	black . --exclude 'temp_.*\\.py'
 
 # -----------------
 # CI/CD Targets
