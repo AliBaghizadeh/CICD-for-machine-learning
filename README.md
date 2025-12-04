@@ -3,6 +3,16 @@
 [![CI/CD](https://github.com/AliBaghizadeh/CICD-for-machine-learning/actions/workflows/ci.yml/badge.svg)](https://github.com/AliBaghizadeh/CICD-for-machine-learning/actions)
 [![HuggingFace Space](https://img.shields.io/badge/🤗%20HuggingFace-Space-yellow)](https://huggingface.co/spaces/alibaghizade/time_series_energy)
 
+---
+
+## 📖 About This Project
+
+This project tackles the critical challenge of **short-term energy load forecasting** for European power grids, using over **800,000 hours** of historical energy consumption data from 10 European countries (Austria, Germany, France, Italy, Belgium, Switzerland, Netherlands, Poland, Czech Republic, and Spain). Accurate energy forecasting is essential for grid stability, cost optimization, and renewable energy integration. The dataset includes hourly energy loads (in megawatts), weather conditions (temperature and solar radiation), and temporal patterns spanning multiple years, making it an ideal testbed for advanced time-series machine learning techniques.
+
+To solve this problem, I built a **production-grade MLOps pipeline** that goes far beyond simple model training. I selected three state-of-the-art gradient boosting algorithms—**XGBoost, LightGBM, and CatBoost**—each known for their exceptional performance on tabular data and time-series forecasting. Rather than settling for default parameters, I implemented **Bayesian hyperparameter optimization using Optuna**, running 20 trials per model (60 total experiments) to systematically search through parameter spaces and identify optimal configurations. This optimization process leveraged **GPU acceleration** on an NVIDIA RTX 5080, reducing training time from hours to minutes while exploring learning rates, tree depths, regularization parameters, and sampling strategies. The entire experimentation process was tracked using **MLflow**, a self-hosted server deployed on **AWS EC2** with **S3 artifact storage** and **PostgreSQL metadata store**, enabling complete reproducibility and model versioning. Finally, I deployed the best-performing models to a **Gradio web application** hosted on **HuggingFace Spaces**, creating an interactive interface where users can compare predictions from all three models in real-time. The entire workflow is automated through **GitHub Actions CI/CD pipelines**, ensuring that every code change triggers model retraining, performance evaluation, and automatic deployment—demonstrating enterprise-level MLOps practices from data to deployment.
+
+---
+
 ## 🎯 Overview
 
 A production-ready MLOps pipeline for forecasting hourly energy consumption across **10 European countries** using **3 optimized gradient boosting models**. This project demonstrates end-to-end machine learning lifecycle management with automated CI/CD, experiment tracking, and model registry.
