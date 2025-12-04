@@ -94,6 +94,18 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
             "❌ Error: Scaler not loaded",
         )
 
+    # Ensure inputs are correct types
+    try:
+        last_load = float(last_load)
+        current_temp = float(current_temp)
+        country_id = str(country_id)
+    except ValueError as e:
+        return (
+            f"❌ Input Error: {e}",
+            f"❌ Input Error: {e}",
+            f"❌ Input Error: {e}",
+        )
+
     # Encode Country ID
     id_map = {
         "AT": 0,
@@ -156,7 +168,14 @@ def predict_all_models(last_load: float, current_temp: float, country_id: str):
             raw_preds[name] = 0.0
         else:
             try:
-                prediction = model.predict(input_scaled)[0]
+                if name == "XGBoost":
+                    # Use DMatrix for robust XGBoost prediction
+                    import xgboost as xgb
+                    dmatrix = xgb.DMatrix(input_scaled)
+                    prediction = model.get_booster().predict(dmatrix)[0]
+                else:
+                    prediction = model.predict(input_scaled)[0]
+                
                 mae = MODEL_PERFORMANCE[name]
                 results[name] = (
                     f"**{prediction:,.2f} MW**\n\n📊 Model MAE: {mae:.2f} MW"
