@@ -40,6 +40,8 @@ if not LOG_FILE.exists():
 MODEL_PERFORMANCE = {"XGBoost": 92.81, "LightGBM": 93.42, "CatBoost": 124.74}
 
 # Load models and scaler
+print("===== Application Startup at", datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "=====")
+print()
 print("Loading models...")
 loaded_models = {}
 for name, path in MODELS.items():
