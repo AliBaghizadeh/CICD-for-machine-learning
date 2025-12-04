@@ -443,7 +443,32 @@ with gr.Blocks(title="⚡ Energy Load Forecast - Multi-Model Comparison") as dem
                 """Refresh all monitoring components"""
                 return plot_load_forecast(), plot_temp_dist(), get_recent_logs()
 
+            def reset_history():
+                """Clear the inference log file and refresh plots"""
+                try:
+                    with open(LOG_FILE, "w", newline="") as f:
+                        writer = csv.writer(f)
+                        writer.writerow(
+                            [
+                                "timestamp",
+                                "last_load",
+                                "current_temp",
+                                "country_id",
+                                "pred_xgboost",
+                                "pred_lightgbm",
+                                "pred_catboost",
+                            ]
+                        )
+                    return refresh_all()
+                except Exception as e:
+                    print(f"Error resetting history: {e}")
+                    return None, None, pd.DataFrame()
+
             refresh_btn.click(fn=refresh_all, outputs=[load_plot, temp_plot, log_table])
+            
+            # Add Reset Button
+            reset_btn = gr.Button("🗑️ Reset History", variant="stop")
+            reset_btn.click(fn=reset_history, outputs=[load_plot, temp_plot, log_table])
 
             # Auto-load on tab select
             demo.load(fn=refresh_all, outputs=[load_plot, temp_plot, log_table])
